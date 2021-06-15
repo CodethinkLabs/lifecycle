@@ -1,0 +1,3 @@
+source:
+  ldap:
+    server: ldaps://ldap.codethink.co.uk:636
