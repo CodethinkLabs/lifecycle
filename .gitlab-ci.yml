@@ -1,0 +1,17 @@
+image: gitlab.codethink.co.uk:5000/infrastructure/python-black-formatter:master
+
+stages:
+  - format_check
+
+format_check:
+  stage: format_check
+  script:
+    - |
+      git rev-list origin/master..HEAD | while read commit
+      do
+        git checkout $commit
+        black --check ./
+      done
+  only:
+    - merge_request
+    - master
