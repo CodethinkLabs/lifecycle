@@ -5,13 +5,24 @@ from lib.ConfigReader import ConfigReader
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "-c", "--configcheck", action="store_true", help="Parse the config and exit."
+    "-c",
+    "--configcheck",
+    action="store_true",
+    help="Parse the config, display and exit.",
 )
-args = parser.parse_args()
+parser.add_argument(
+    "-f",
+    "--file",
+    help="config file location.  Either a single file or a folder of yaml files.",
+    default="config/",
+)
 
-config = ConfigReader()
-if args.configcheck:
-    print("Config check requested.  Config-as-read is:")
-    print("")
-    config.print()
-    exit(0)
+if __file__ == "__main__":
+    args = parser.parse_args()
+
+    config = ConfigReader(args.file)
+    if args.configcheck:
+        print("Config check requested.  Config-as-read is:")
+        print("")
+        config.print()
+        exit(0)

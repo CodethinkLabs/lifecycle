@@ -2,13 +2,22 @@
 
 import yaml
 import glob
+import os.path
 
 
 class ConfigReader:
-    def __init__(self, folder="config/"):
+    def __init__(self, file):
         self.config = {}
 
-        for file in sorted(glob.glob(folder + "*.yml")):
+        if os.path.isdir(file):
+            filelist = sorted(glob.glob(file + "/*.yml"))
+        elif os.path.isfile(file):
+            filelist = [file]
+        else:
+            print("Specified config file couldn't be found! {}!".format(file))
+            exit(1)
+
+        for file in filelist:
             with open(file, "r") as config_file:
                 try:
                     self.config.update(yaml.safe_load(config_file))
