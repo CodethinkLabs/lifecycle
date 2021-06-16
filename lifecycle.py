@@ -8,7 +8,13 @@ parser.add_argument(
     "-c",
     "--configcheck",
     action="store_true",
-    help="Parse the config, display and exit.",
+    help="Parse the config files, replace environment variables, display and exit.",
+)
+parser.add_argument(
+    "-r",
+    "--configraw",
+    action="store_true",
+    help="When performing a config check, do not parse environment variables.",
 )
 parser.add_argument(
     "-f",
@@ -17,12 +23,17 @@ parser.add_argument(
     default="config/",
 )
 
-if __file__ == "__main__":
+if __name__ == "__main__":
     args = parser.parse_args()
 
-    config = ConfigReader(args.file)
+    config = ConfigReader(args.file, args.configraw)
     if args.configcheck:
-        print("Config check requested.  Config-as-read is:")
-        print("")
-        config.print()
+        if args.configraw:
+            print("Raw config check requested.  Config is:")
+            print("")
+            config.print_raw()
+        else:
+            print("Config check requested.  Config is:")
+            print("")
+            config.print()
         exit(0)
