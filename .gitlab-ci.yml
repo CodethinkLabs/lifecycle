@@ -1,17 +1,23 @@
 image: gitlab.codethink.co.uk:5000/infrastructure/python-black-formatter:master
 
 stages:
-  - format_check
+  - all_checks
 
 format_check:
-  stage: format_check
+  stage: all_checks
   script:
     - |
-      git rev-list origin/master..HEAD | while read commit
+      git rev-list origin/master..HEAD -- | while read commit
       do
         git checkout $commit
         black --check ./
       done
-  only:
-    - merge_request
-    - master
+
+run_tests:
+  stage: all_checks
+  script:
+    - |
+      python3 -m pip install pipenv
+      pipenv install --dev --system
+      export PYTHONPATH="$PYTHONPATH:."
+      pytest tests/*.py

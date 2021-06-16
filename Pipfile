@@ -5,9 +5,10 @@ name = "pypi"
 
 [packages]
 pyyaml = "*"
-black = "*"
 
 [dev-packages]
+pytest = "*"
+black = "==21.6b0"
 
 [requires]
 python_version = "3.9"
