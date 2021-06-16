@@ -17,7 +17,7 @@ def test_config_file():
 
 def test_config_broken():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        config = ConfigReader("tests/config/broken.yml")
+        ConfigReader("tests/config/broken.yml")
     assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code == 1
 
@@ -30,6 +30,6 @@ def test_config_environment_variable(monkeypatch):
 
 def test_config_environment_variable_not_provided(monkeypatch):
     with pytest.raises(SystemExit) as pytest_wrapped_e:
-        config = ConfigReader("tests/config/working/1.yml")
+        ConfigReader("tests/config/working/1.yml")
     assert pytest_wrapped_e.type == SystemExit
     assert pytest_wrapped_e.value.code == 1
