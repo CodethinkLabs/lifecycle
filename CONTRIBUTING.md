@@ -10,4 +10,6 @@ Chat to us in #co078 if you've got any ideas you're interested in contributing.
 ## Merge Requests
 
 * Must have `black` run against every commit.  This is enforced by CI.
+* Must pass pylint linting
+* Should have tests where possible
 * Should have their history rewritten to group things nicely together.

@@ -9,6 +9,8 @@ pyyaml = "*"
 [dev-packages]
 pytest = "*"
 black = "==21.6b0"
+pylint = "*"
+pytest-pylint = "*"
 
 [requires]
 python_version = "3.9"

@@ -1,7 +1,8 @@
-# lifecycle main file
+"""lifecycle main file"""
 
 import argparse
-from lib.ConfigReader import ConfigReader
+import sys
+from lib.config_reader import ConfigReader
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -36,4 +37,4 @@ if __name__ == "__main__":
             print("Config check requested.  Config is:")
             print("")
             config.print()
-        exit(0)
+        sys.exit(0)
