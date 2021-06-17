@@ -1,4 +1,4 @@
-""" Basic functionality tests """
+""" Basic functionality tests for config reader """
 
 import pytest
 from lib.config_reader import ConfigReader
