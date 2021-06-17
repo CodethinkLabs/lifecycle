@@ -1,6 +1,6 @@
 """ Basic functionality tests for user model """
 
-from lib.models import User
+from lib.models import User, Group
 
 
 def test_basic_user():
@@ -30,3 +30,9 @@ def test_name_specified():
     assert user.fullname == "test user"
     assert user.forename == "testington"
     assert user.surname == "user-smythe"
+
+
+def test_group_user():
+    """Test a user model can be created and added to a group"""
+    user = User("testuser", groups=[Group("testgroup")])
+    assert user.groups[0].name == "testgroup"
