@@ -51,3 +51,22 @@ class User:
             if surname:
                 tmp_fullname.append(surname)
             self.fullname = " ".join(tmp_fullname)
+
+
+@dataclass
+class Group:
+    """internal representation of a group"""
+
+    name = ""
+    description = ""
+    email = []
+
+    def __init__(
+        self,
+        name,
+        description="",
+        email=None,
+    ):
+        self.name = name
+        self.description = description
+        self.email = email or []
