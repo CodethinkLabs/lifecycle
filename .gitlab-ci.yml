@@ -18,16 +18,12 @@ pylint:
   stage: format_checks
   script:
     - |
-      python3 -m pip install pipenv
-      pipenv install --dev --system
-      export PYTHONPATH="$PYTHONPATH:."
-      pytest --pylint
+      python3 -m pip install . pylint pyyaml
+      pylint lifecycle
 
 run_tests:
   stage: tests
   script:
     - |
-      python3 -m pip install pipenv
-      pipenv install --dev --system
-      export PYTHONPATH="$PYTHONPATH:."
+      python3 -m pip install . pytest pyyaml
       pytest

@@ -1,6 +1,6 @@
 """ Basic functionality tests for user model """
 
-from lib.models import Group
+from lifecycle.models import Group
 
 
 def test_basic_group():
