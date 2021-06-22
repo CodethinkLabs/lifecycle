@@ -1,7 +1,7 @@
 """ Basic functionality tests for config reader """
 
 import pytest
-from lib.config_reader import ConfigReader
+from lifecycle.config_reader import ConfigReader
 
 
 def test_config_folder():

@@ -2,7 +2,7 @@
 
 import argparse
 import sys
-from lib.config_reader import ConfigReader
+from lifecycle.config_reader import ConfigReader
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -24,7 +24,9 @@ parser.add_argument(
     default="config/",
 )
 
-if __name__ == "__main__":
+
+def main():
+    """Entry point for the lifecyle cli"""
     args = parser.parse_args()
 
     config = ConfigReader(args.file, args.configraw)
@@ -38,3 +40,7 @@ if __name__ == "__main__":
             print("")
             config.print()
         sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
