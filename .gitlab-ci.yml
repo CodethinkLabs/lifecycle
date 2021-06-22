@@ -19,7 +19,7 @@ pylint:
   script:
     - |
       python3 -m pip install .[dev]
-      pylint lifecycle
+      pytest --pylint
 
 run_tests:
   stage: tests
