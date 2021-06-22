@@ -15,6 +15,7 @@ setup(
     extras_require={
         "dev": dev_requirements,
     },
+    python_requires=">3.4",
     package_dir={"lifecycle": "lifecycle"},
     entry_points={
         "console_scripts": [

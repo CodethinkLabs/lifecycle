@@ -4,13 +4,4 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-pyyaml = "*"
-
-[dev-packages]
-pytest = "*"
-black = "==21.6b0"
-pylint = "*"
-pytest-pylint = "*"
-
-[requires]
-python_version = "3.9"
+lifecycle = {editable = true, extras = ["dev"], path = "."}

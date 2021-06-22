@@ -18,12 +18,20 @@ pylint:
   stage: format_checks
   script:
     - |
-      python3 -m pip install . -r requirements-dev.txt
+      python3 -m pip install .[dev]
       pylint lifecycle
 
 run_tests:
   stage: tests
   script:
     - |
-      python3 -m pip install . -r requirements-dev.txt
+      python3 -m pip install .[dev]
       pytest
+
+pipenv:
+  stage: tests
+  script:
+    - |
+      python3 -m pip install pipenv
+      pipenv install
+      pipenv run lifecycle --help
