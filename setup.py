@@ -1,3 +1,5 @@
+"""Setup file for lifecyle application"""
+
 from setuptools import setup, find_packages
 
 # Parse requirements files
