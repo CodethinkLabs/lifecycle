@@ -3,10 +3,10 @@
 from setuptools import setup, find_packages
 
 # Parse requirements files
-with open("requirements.txt") as f:
+with open("requirements.txt", "r", encoding="utf-8") as f:
     install_requirements = f.read().splitlines()
 
-with open("requirements-dev.txt") as f:
+with open("requirements-dev.txt", "r", encoding="utf-8") as f:
     dev_requirements = f.read().splitlines()
 
 
