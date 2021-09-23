@@ -22,16 +22,16 @@ class ConfigReader:
         elif os.path.isfile(file):
             filelist = [file]
         else:
-            print("Specified config file couldn't be found! {}!".format(file))
+            print(f"Specified config file couldn't be found! {file}!")
             sys.exit(1)
 
         for current_file in filelist:
-            with open(current_file, "r") as config_file:
+            with open(current_file, "r", encoding="utf-8") as config_file:
                 try:
                     self.config_raw.update(yaml.safe_load(config_file))
                 except (yaml.YAMLError, ValueError) as exc:
-                    print("Config read failed when parsing {}!".format(current_file))
-                    print("Error was: {}".format(exc))
+                    print(f"Config read failed when parsing {current_file}!")
+                    print(f"Error was: {exc}")
                     sys.exit(1)
 
         if not raw:
@@ -41,9 +41,7 @@ class ConfigReader:
                 )
             except KeyError as exc:
                 print(
-                    "The environment variable {} used in your config file wasn't provided!".format(
-                        exc
-                    )
+                    f"The environment variable {exc} used in your config file wasn't provided!"
                 )
                 sys.exit(1)
         else:
