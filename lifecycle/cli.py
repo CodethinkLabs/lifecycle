@@ -1,6 +1,7 @@
 """lifecycle main file"""
 
 import argparse
+import importlib
 import sys
 from lifecycle.config_reader import ConfigReader
 
@@ -40,6 +41,15 @@ def main():
             print("")
             config.print()
         sys.exit(0)
+
+    if "source" in config.config:
+        source_mod = importlib.import_module(
+            f"lifecycle.source_{config.config.source.module.lower()}",
+        )
+        # pylint: disable-msg=invalid-name
+        Source = getattr(source_mod, f"Source{config.config.source.module}")
+        current_source = Source(config.config["source"]["config"])
+        print(current_source)
 
 
 if __name__ == "__main__":
