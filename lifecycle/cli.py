@@ -48,8 +48,8 @@ def main():
         )
         # pylint: disable-msg=invalid-name
         Source = getattr(source_mod, f"Source{config.config.source.module}")
-        current_source = Source(config.config["source"]["config"])
-        print(current_source)
+        current_source = Source(config.config.source)
+        current_source.fetch()
 
 
 if __name__ == "__main__":
