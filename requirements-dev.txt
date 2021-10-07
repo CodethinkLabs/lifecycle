@@ -1,4 +1,5 @@
 pytest
 pylint
+pytest-mock
 pytest-pylint
 black
