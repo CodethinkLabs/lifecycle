@@ -7,6 +7,7 @@ import string
 import sys
 from ast import literal_eval
 import yaml
+from addict import Dict
 
 
 class ConfigReader:
@@ -14,7 +15,7 @@ class ConfigReader:
 
     def __init__(self, file, raw=False):
         """Parse the specified file or folder into self.config"""
-        self.config = {}
+        self.config = None
         self.config_raw = {}
 
         if os.path.isdir(file):
@@ -36,16 +37,17 @@ class ConfigReader:
 
         if not raw:
             try:
-                self.config = literal_eval(
+                config_dict = literal_eval(
                     string.Template(str(self.config_raw)).substitute(**os.environ)
                 )
+                self.config = Dict(config_dict)
             except KeyError as exc:
                 print(
                     f"The environment variable {exc} used in your config file wasn't provided!"
                 )
                 sys.exit(1)
         else:
-            self.config = self.config_raw
+            self.config = Dict(self.config_raw)
 
     def print(self):
         """Print the current configuration to the terminal"""
