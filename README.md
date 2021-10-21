@@ -1,6 +1,6 @@
 # User Lifecycle Management
 
-`lifecycle` is a piece of software intended to help implement the [Single Source of Truth](https://en.wikipedia.org/wiki/Single_source_of_truth) principal across disparate pieces of software.  It is intended to be used alongside a single-sign-on authentication system such as SAML or OIDC, and provide lifecycle management for the users in these applications.
+`lifecycle` is a piece of software intended to help implement the [Single Source of Truth](https://en.wikipedia.org/wiki/Single_source_of_truth) principle across disparate applications and services.  It is intended to be used alongside a single-sign-on authentication system such as SAML or OIDC, and provide lifecycle management for the users in these applications.
 
 ## Why?
 
