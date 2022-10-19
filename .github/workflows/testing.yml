@@ -19,7 +19,9 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install .[dev]
     - name: Testing the code with pytest
-      run: pytest
+      run: |
+        python -m pytest --cov=lifecycle --cov-report=term --cov-report=xml
+        cat coverage.xml
   smoketest:
     runs-on: ubuntu-latest
     steps:
