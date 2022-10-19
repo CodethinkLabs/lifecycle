@@ -1,3 +1,4 @@
 lifecycle.egg-info/
 .coverage
 coverage.xml
+__pycache__
