@@ -3,16 +3,16 @@
 from dataclasses import dataclass, field
 
 
-@dataclass
+@dataclass(unsafe_hash=True, order=True)
 class Group:
     """internal representation of a group"""
 
     name: str
     description: str = ""
-    email: list[str] = field(default_factory=list)
+    email: tuple[str] = field(default_factory=tuple)
 
 
-@dataclass
+@dataclass(unsafe_hash=True, order=True)
 class User:
     """internal representation of a user"""
 
@@ -22,8 +22,8 @@ class User:
     forename: str = ""
     surname: str = ""
     fullname: str = ""
-    email: list[str] = field(default_factory=list)
-    groups: list[Group] = field(default_factory=list)
+    email: tuple[str] = field(default_factory=tuple)
+    groups: tuple[Group] = field(default_factory=tuple)
 
     def __post_init__(self):
 
