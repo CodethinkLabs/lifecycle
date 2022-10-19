@@ -1,6 +1,15 @@
 """ Lifecycle User Model """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+
+@dataclass
+class Group:
+    """internal representation of a group"""
+
+    name: str
+    description: str = ""
+    email: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -9,25 +18,14 @@ class User:
 
     # pylint: disable-msg=too-many-arguments
 
-    username = ""
-    forename = ""
-    surname = ""
-    fullname = ""
-    email = []
-    groups = []
+    username: str
+    forename: str = ""
+    surname: str = ""
+    fullname: str = ""
+    email: list[str] = field(default_factory=list)
+    groups: list[Group] = field(default_factory=list)
 
-    def __init__(
-        self,
-        username,
-        forename=None,
-        surname=None,
-        fullname=None,
-        email=None,
-        groups=None,
-    ):
-        self.username = username
-        self.email = email or []
-        self.groups = groups or []
+    def __post_init__(self):
 
         # this section will get a bit into 'fallacies programmers believe about names'
         # but our basic assumptions for this logic are: forename is first word in
@@ -36,37 +34,15 @@ class User:
         # plus the ability to specify each of forename, surname, and fullname
         # should cover almost all our cases.
 
-        self.fullname = fullname
-        self.forename = forename
-        self.surname = surname
-        if fullname:
-            if not forename:
-                self.forename = fullname.split(" ")[0]
-            if not surname:
-                self.surname = fullname.split(" ")[-1]
+        if self.fullname:
+            if not self.forename:
+                self.forename = self.fullname.split(" ")[0]
+            if not self.surname:
+                self.surname = self.fullname.split(" ")[-1]
         else:
             tmp_fullname = []
-            if forename:
-                tmp_fullname.append(forename)
-            if surname:
-                tmp_fullname.append(surname)
+            if self.forename:
+                tmp_fullname.append(self.forename)
+            if self.surname:
+                tmp_fullname.append(self.surname)
             self.fullname = " ".join(tmp_fullname)
-
-
-@dataclass
-class Group:
-    """internal representation of a group"""
-
-    name = ""
-    description = ""
-    email = []
-
-    def __init__(
-        self,
-        name,
-        description="",
-        email=None,
-    ):
-        self.name = name
-        self.description = description
-        self.email = email or []
