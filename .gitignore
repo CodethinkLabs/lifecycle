@@ -3,3 +3,4 @@ lifecycle.egg-info/
 coverage.xml
 __pycache__
 *.swp
+/build
