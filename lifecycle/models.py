@@ -36,9 +36,9 @@ class User:
 
         if self.fullname:
             if not self.forename:
-                self.forename = self.fullname.split(" ")[0]
+                self.forename = self.fullname.split(" ", maxsplit=1)[0]
             if not self.surname:
-                self.surname = self.fullname.split(" ")[-1]
+                self.surname = self.fullname.split(" ", maxsplit=1)[-1]
         else:
             tmp_fullname = []
             if self.forename:
