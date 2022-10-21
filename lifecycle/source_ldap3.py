@@ -81,21 +81,18 @@ class SourceLDAP3:
         if connection.entries:
             for ldap_entry in connection.entries:
                 user_account = ldap_entry.entry_attributes_as_dict
-                ns_account_lock = user_account["nsAccountLock"]
-                locked = len(ns_account_lock) > 0 and ns_account_lock[0] == "TRUE"
 
-                if (
-                    not locked
-                    and len(user_account["uid"]) > 0
-                    and len(user_account["mail"]) > 0
-                ):
+                if len(user_account["uid"]) > 0 and len(user_account["mail"]) > 0:
                     uid = user_account["uid"][0]
+                    ns_account_lock = user_account["nsAccountLock"]
+                    locked = len(ns_account_lock) > 0 and ns_account_lock[0] == "TRUE"
                     user = User(
                         uid,
                         forename=user_account["givenName"][0],
                         surname=user_account["surName"][0],
                         email=user_account["mail"],
                         groups=[],
+                        locked=locked,
                     )
                     self.users[uid] = user
         else:
