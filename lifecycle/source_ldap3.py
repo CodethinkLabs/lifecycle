@@ -120,7 +120,7 @@ class SourceLDAP3:
                     else:
                         description = ""
                     group = Group(name, description, ldap_group["mail"])
-
+                    # member is of the format uid=admin,cn=users,cn=accounts,...
                     for member in ldap_group["member"]:
                         components = member.split(",")
                         uid = components[0].split("=")[1]

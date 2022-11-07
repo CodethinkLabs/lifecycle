@@ -34,6 +34,11 @@ class TargetLDAP3(SourceLDAP3):
         # 'uid' is also a field that could go into ldap changes, but we don't expect that to ever change
 
         # XXX: HOW DO I SET WHICH USERS ARE MEMBERS OF GROUPS?
+        #      Get the Groups that the User is a part of,
+        #      Search for them in LDAP
+        #      And update every Group entry to add/remove/update the list of "member"
+        #      to include the User's dn.
+        # XXX: Hang on, do users' DN start with "uid=" or "cn="?
         lock_status = "TRUE" if user.locked else "FALSE"
         return {
             "givenName": [(ldap3.MODIFY_REPLACE, [user.forename])],
