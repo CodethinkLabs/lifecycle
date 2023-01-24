@@ -21,7 +21,7 @@ setup(
             "pytest-pylint"
         ],
     },
-    python_requires=">3.4",
+    python_requires=">=3.7",
     package_dir={"lifecycle": "lifecycle"},
     entry_points={
         "console_scripts": [
