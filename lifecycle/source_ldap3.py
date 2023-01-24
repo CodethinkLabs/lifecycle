@@ -25,8 +25,8 @@ class SourceLDAP3:
 
         if not isinstance(config, dict):
             error = "You must provide a configuration dict to use this function"
-        if "hostname" not in config:
-            error = "Hostname must be specified"
+        if "url" not in config:
+            error = "'url' must be specified"
         if "base_dn" not in config:
             error = "Base DN must be specified"
         if not ("bind_dn" in config and "bind_password" in config) and not config.get(
@@ -48,7 +48,7 @@ class SourceLDAP3:
 
     def connect(self):
         """Connect to LDAP server using current configuration and return the connection"""
-        server = ldap3.Server(f'ldaps://{self.config["hostname"]}')
+        server = ldap3.Server(self.config["url"])
         connection = ldap3.Connection(
             server, user=self.config["bind_dn"], password=self.config["bind_password"]
         )

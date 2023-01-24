@@ -12,12 +12,12 @@ def test_config_basic():
     """Test an LDAP source with minimal config can be created"""
     source = SourceLDAP3(
         config={
-            "hostname": "example.org",
+            "url": "ldaps://ldap.example.org",
             "base_dn": "dc=example,dc=org",
             "anonymous_bind": True,
         }
     )
-    assert source.config["hostname"] == "example.org"
+    assert source.config["url"] == "ldaps://ldap.example.org"
     assert source.config["base_dn"] == "dc=example,dc=org"
     assert source.config["anonymous_bind"] is True
     assert source.config["port"] == 636
@@ -29,7 +29,7 @@ def test_config_no_creds():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         SourceLDAP3(
             config={
-                "hostname": "example.org",
+                "url": "ldap://ldap.example.org",
                 "base_dn": "dc=example,dc=org",
             }
         )
@@ -42,7 +42,7 @@ def test_config_no_creds_anon_false():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         SourceLDAP3(
             config={
-                "hostname": "example.org",
+                "url": "ldap://ldap.example.org",
                 "base_dn": "dc=example,dc=org",
                 "anonymous_bind": False,
             }
@@ -55,7 +55,7 @@ def test_config_with_creds():
     """LDAP Source with credentials and no anonymous_bind should work ok"""
     source = SourceLDAP3(
         config={
-            "hostname": "example.org",
+            "url": "ldap://ldap.example.org",
             "base_dn": "dc=example,dc=org",
             "bind_dn": "cn=blep,dc=example,dc=org",
             "bind_password": "password",
@@ -93,7 +93,7 @@ def fixture_source():
     """Fixture to create a test Modelsource"""
     return SourceLDAP3(
         config={
-            "hostname": "ldap.codethink.co.uk",
+            "url": "ldap://ldap.example.org",
             "base_dn": "dc=example,dc=org",
             "bind_dn": "johndoe",
             "bind_password": "insecure",
