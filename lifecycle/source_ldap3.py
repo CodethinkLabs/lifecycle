@@ -40,7 +40,6 @@ class SourceLDAP3:
         default_config = {
             "anonymous_bind": False,
             "use_ssl": True,
-            "port": 636,
         }
 
         self.config.update(default_config)

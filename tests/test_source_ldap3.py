@@ -20,7 +20,6 @@ def test_config_basic():
     assert source.config["url"] == "ldaps://ldap.example.org"
     assert source.config["base_dn"] == "dc=example,dc=org"
     assert source.config["anonymous_bind"] is True
-    assert source.config["port"] == 636
     assert source.config["use_ssl"] is True
 
 
