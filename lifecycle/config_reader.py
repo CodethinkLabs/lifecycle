@@ -1,13 +1,14 @@
 """Config reader for lifecycle"""
 
+from ast import literal_eval
 import glob
 import os
 import os.path
 import string
 import sys
-from ast import literal_eval
-import yaml
+
 from addict import Dict
+import yaml
 
 
 class ConfigReader:

@@ -10,7 +10,7 @@ with non-sso authentication methods.
 
 ## How?
 
-The application is intended to be run in an automated scheduled fashion.  A docker container will be provided where a config volume can be mounted to configure your applications. 
+The application is intended to be run in an automated scheduled fashion.  A docker container will be provided where a config volume can be mounted to configure your applications.
 
 ## Layout
 

@@ -4,7 +4,9 @@ This checks the logic of config settings and mocks an LDAP server connection.
 """
 
 from unittest.mock import MagicMock, PropertyMock
+
 import pytest
+
 from lifecycle.source_ldap3 import SourceLDAP3
 
 
