@@ -2,20 +2,24 @@
 
 from setuptools import setup, find_packages
 
-# Parse requirements files
-with open("requirements.txt", "r", encoding="utf-8") as f:
-    install_requirements = f.read().splitlines()
-
-with open("requirements-dev.txt", "r", encoding="utf-8") as f:
-    dev_requirements = f.read().splitlines()
-
 
 setup(
     name="lifecycle",
     packages=find_packages(exclude=("tests", "tests.*")),
-    install_requires=install_requirements,
+    install_requires=[
+        "addict",
+        "ldap3",
+        "pyyaml"
+    ],
     extras_require={
-        "dev": dev_requirements,
+        "dev": [
+            "black",
+            "pylint",
+            "pytest",
+            "pytest-cov",
+            "pytest-mock",
+            "pytest-pylint"
+        ],
     },
     python_requires=">3.4",
     package_dir={"lifecycle": "lifecycle"},
