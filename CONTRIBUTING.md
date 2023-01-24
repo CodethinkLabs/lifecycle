@@ -27,5 +27,5 @@ To then configure the development environment run:
 * Must pass pylint linting
 * Should have tests where possible
 * Should have their history rewritten to group things nicely together.
-* Should have inline documentation such that readthedocs or similar documentation 
+* Should have inline documentation such that readthedocs or similar documentation
   sites can generate documentation

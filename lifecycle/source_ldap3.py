@@ -1,8 +1,10 @@
 """Source for pulling users and groups from LDAP """
 
 import sys
+
 import ldap3
-from lifecycle.models import User, Group
+
+from lifecycle.models import Group, User
 
 
 class SourceLDAP3:
