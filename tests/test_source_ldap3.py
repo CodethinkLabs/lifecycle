@@ -108,7 +108,7 @@ def test_current_user(source, ldap_connection):
     my_user_data = [
         {
             "uid": ["jsmith"],
-            "mail": ["john.smith@codethink.co.uk"],
+            "mail": ["john.smith@example.org"],
             "surName": ["Smith"],
             "nsAccountLock": [],
             "givenName": ["John"],
@@ -125,7 +125,7 @@ def test_current_user(source, ldap_connection):
     assert user.surname == "Smith"
     assert user.fullname == "John Smith"
     assert user.forename == "John"
-    assert user.email == ["john.smith@codethink.co.uk"]
+    assert user.email == ["john.smith@example.org"]
     assert len(user.groups) == 0
 
     my_group_data = [
@@ -133,9 +133,9 @@ def test_current_user(source, ldap_connection):
             "description": ["Built In Default group for all users"],
             "cn": ["ipausers"],
             "member": [
-                "uid=jsmith,cn=users,cn=accounts,dc=codethink,dc=co,dc=uk",
+                "uid=jsmith,cn=users,cn=accounts,dc=example,dc=org",
             ],
-            "mail": ["ipausers@codethink.co.uk"],
+            "mail": ["ipausers@example.org"],
         }
     ]
 
@@ -146,4 +146,4 @@ def test_current_user(source, ldap_connection):
     group = user.groups[0]
     assert group.name == "ipausers"
     assert group.description == "Built In Default group for all users"
-    assert group.email == ["ipausers@codethink.co.uk"]
+    assert group.email == ["ipausers@example.org"]
