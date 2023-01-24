@@ -7,6 +7,20 @@ it might not get merged, beware!
 
 Chat to us in #lifecycle if you've got any ideas you're interested in contributing.
 
+## Development
+
+To set up a local development environment, create a python virtual environment,
+using `venv` or similar, e.g.:
+
+    python3 -m venv .venv
+
+To then configure the development environment run:
+
+    . .venv/bin/activate && \
+        pip install pipenv && \
+        pipenv install && \
+        pre-commit install && \
+
 ## Merge Requests
 
 * Must have `black` run against every commit.  This is enforced by CI.
