@@ -24,6 +24,7 @@ class User:
     fullname: str = ""
     email: tuple[str] = field(default_factory=tuple)
     groups: tuple[Group] = field(default_factory=tuple)
+    locked: bool = False
 
     def __post_init__(self):
 
