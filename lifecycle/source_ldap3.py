@@ -7,6 +7,10 @@ import ldap3
 from lifecycle.models import Group, User
 
 
+class AutheticationException(Exception):
+    """Raised when the binding fails"""
+
+
 class SourceLDAP3:
     """Given an ldap server config, will collect user and groups from said LDAP server"""
 
@@ -53,7 +57,10 @@ class SourceLDAP3:
         connection = ldap3.Connection(
             server, user=self.config["bind_dn"], password=self.config["bind_password"]
         )
-        connection.bind()
+        # We want to ensure that we pass in the wrong password that we get some feedback about it
+        # The handling for ensuring that a password is passed in is already handled elsewhere
+        if not connection.bind():
+            raise AutheticationException("Password is invalid")
         return connection
 
     def fetch(self):
