@@ -1,3 +1,6 @@
 source:
-  ldap:
-    server: ldaps://ldap.codethink.co.uk:636
+  module: LDAP3
+  url: ldaps://ldap.example.com:636
+  base_dn: cn=accounts,dc=example,dc=com
+  bind_dn: uid=joebloggs,cn=users,cn=accounts,dc=example,dc=com
+  bind_password: insecure

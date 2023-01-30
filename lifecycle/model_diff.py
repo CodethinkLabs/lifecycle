@@ -3,8 +3,9 @@
 import copy
 import dataclasses
 import re
+from typing import Dict, List
 
-from lifecycle.models import User, Group
+from lifecycle.models import Group, User
 
 
 class ModelDifferenceError(Exception):
@@ -51,11 +52,11 @@ class ModelDifferenceConfig:
         - '^\w\w\d\d\d$'
     ```
     """
-    fields: list[str]
-    groups_patterns: list[re.Pattern]
+    fields: List[str]
+    groups_patterns: List[re.Pattern]
 
     @staticmethod
-    def from_dict(config_dict: dict):
+    def from_dict(config_dict: Dict):
         """Parses a dict of possible config values, validates and returns a ModelDifferenceConfig"""
 
         config_fields = config_dict["fields"]
@@ -89,10 +90,10 @@ class ModelDifference:
         unchanged_users: Dict of users that have not been changed in the source.
     """
 
-    added_users: dict[str, User]
-    removed_users: dict[str, User]
-    changed_users: dict[str, User]
-    unchanged_users: dict[str, User]
+    added_users: Dict[str, User]
+    removed_users: Dict[str, User]
+    changed_users: Dict[str, User]
+    unchanged_users: Dict[str, User]
 
     @staticmethod
     def _list_groups(
@@ -163,8 +164,8 @@ class ModelDifference:
 
     @staticmethod
     def calculate(
-        source_users: dict[str, User],
-        target_users: dict[str, User],
+        source_users: Dict[str, User],
+        target_users: Dict[str, User],
         config: ModelDifferenceConfig,
     ):
         """Calculates the differences between the source_users and target_users

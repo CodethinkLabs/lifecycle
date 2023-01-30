@@ -1,3 +1,7 @@
-target:
-  suitecrm:
-    host: crm.codethink.co.uk
+targets:
+  - module: SuiteCRM
+    url: https://crm.example.com
+    api_user: root
+    api_password: insecure
+    api_client_id: bb138858-2be9-463d-9b9f-0f1aab374fea
+    api_client_secret: insecure

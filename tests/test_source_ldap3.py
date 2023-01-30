@@ -4,7 +4,9 @@ This checks the logic of config settings and mocks an LDAP server connection.
 """
 
 from unittest.mock import MagicMock, PropertyMock
+
 import pytest
+
 from lifecycle.source_ldap3 import SourceLDAP3
 
 
@@ -12,15 +14,14 @@ def test_config_basic():
     """Test an LDAP source with minimal config can be created"""
     source = SourceLDAP3(
         config={
-            "hostname": "example.org",
+            "url": "ldaps://ldap.example.org",
             "base_dn": "dc=example,dc=org",
             "anonymous_bind": True,
         }
     )
-    assert source.config["hostname"] == "example.org"
+    assert source.config["url"] == "ldaps://ldap.example.org"
     assert source.config["base_dn"] == "dc=example,dc=org"
     assert source.config["anonymous_bind"] is True
-    assert source.config["port"] == 636
     assert source.config["use_ssl"] is True
 
 
@@ -29,7 +30,7 @@ def test_config_no_creds():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         SourceLDAP3(
             config={
-                "hostname": "example.org",
+                "url": "ldap://ldap.example.org",
                 "base_dn": "dc=example,dc=org",
             }
         )
@@ -42,7 +43,7 @@ def test_config_no_creds_anon_false():
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         SourceLDAP3(
             config={
-                "hostname": "example.org",
+                "url": "ldap://ldap.example.org",
                 "base_dn": "dc=example,dc=org",
                 "anonymous_bind": False,
             }
@@ -55,7 +56,7 @@ def test_config_with_creds():
     """LDAP Source with credentials and no anonymous_bind should work ok"""
     source = SourceLDAP3(
         config={
-            "hostname": "example.org",
+            "url": "ldap://ldap.example.org",
             "base_dn": "dc=example,dc=org",
             "bind_dn": "cn=blep,dc=example,dc=org",
             "bind_password": "password",
@@ -93,7 +94,7 @@ def fixture_source():
     """Fixture to create a test Modelsource"""
     return SourceLDAP3(
         config={
-            "hostname": "ldap.codethink.co.uk",
+            "url": "ldap://ldap.example.org",
             "base_dn": "dc=example,dc=org",
             "bind_dn": "johndoe",
             "bind_password": "insecure",
@@ -107,7 +108,7 @@ def test_current_user(source, ldap_connection):
     my_user_data = [
         {
             "uid": ["jsmith"],
-            "mail": ["john.smith@codethink.co.uk"],
+            "mail": ["john.smith@example.org"],
             "surName": ["Smith"],
             "nsAccountLock": [],
             "givenName": ["John"],
@@ -124,7 +125,7 @@ def test_current_user(source, ldap_connection):
     assert user.surname == "Smith"
     assert user.fullname == "John Smith"
     assert user.forename == "John"
-    assert user.email == ["john.smith@codethink.co.uk"]
+    assert user.email == ["john.smith@example.org"]
     assert len(user.groups) == 0
 
     my_group_data = [
@@ -132,9 +133,9 @@ def test_current_user(source, ldap_connection):
             "description": ["Built In Default group for all users"],
             "cn": ["ipausers"],
             "member": [
-                "uid=jsmith,cn=users,cn=accounts,dc=codethink,dc=co,dc=uk",
+                "uid=jsmith,cn=users,cn=accounts,dc=example,dc=org",
             ],
-            "mail": ["ipausers@codethink.co.uk"],
+            "mail": ["ipausers@example.org"],
         }
     ]
 
@@ -145,4 +146,4 @@ def test_current_user(source, ldap_connection):
     group = user.groups[0]
     assert group.name == "ipausers"
     assert group.description == "Built In Default group for all users"
-    assert group.email == ["ipausers@codethink.co.uk"]
+    assert group.email == ["ipausers@example.org"]

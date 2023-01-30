@@ -1,3 +1,0 @@
-addict
-pyyaml
-ldap3
