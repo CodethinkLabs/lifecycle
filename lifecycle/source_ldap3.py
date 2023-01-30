@@ -57,8 +57,10 @@ class SourceLDAP3:
         connection = ldap3.Connection(
             server, user=self.config["bind_dn"], password=self.config["bind_password"]
         )
-        # We want to ensure that if incorrect credentials are passed in that we get some feedback about it
-        # The handling for ensuring that a password is passed in is already handled elsewhere
+
+        # We want to ensure that if incorrect credentials are passed in
+        # that we get some feedback about it
+        # Ensuring that a password is passed in is already handled elsewhere
         if not connection.bind():
             raise AuthenticationException("Username or Password not valid")
         return connection
