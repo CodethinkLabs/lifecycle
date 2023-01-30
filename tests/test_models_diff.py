@@ -2,13 +2,14 @@
 
 import pytest
 
-from lifecycle.models import User, Group
 from lifecycle.model_diff import (
-    ModelDifference,
-    ModelDifferenceConfig,
     InvalidField,
     InvalidRegex,
+    ModelDifference,
+    ModelDifferenceConfig,
 )
+from lifecycle.models import Group, User
+
 
 # what to test:
 # bad config
