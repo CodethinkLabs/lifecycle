@@ -4,7 +4,6 @@ from ast import literal_eval
 import glob
 import logging
 import os
-import os.path
 import string
 import sys
 
