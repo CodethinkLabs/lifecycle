@@ -116,6 +116,7 @@ class SourceLDAP3:
                     )
                     users[uid] = user
             self.users = users
+            logging.debug(users)
             return users
 
         logging.debug("No user accounts found")
