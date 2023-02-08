@@ -5,7 +5,7 @@ import importlib
 import logging
 import sys
 
-from lifecycle.config_reader import ConfigReader
+from .config_reader import ConfigReader
 
 
 def parse_args():

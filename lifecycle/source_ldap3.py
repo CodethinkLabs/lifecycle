@@ -5,11 +5,8 @@ from typing import Dict
 
 import ldap3
 
-from lifecycle.models import Group, User
-
-
-class LifecycleException(Exception):
-    """Generic Lifecycle exception. Base class for all the others"""
+from . import LifecycleException
+from .models import Group, User
 
 
 class AuthenticationException(LifecycleException):

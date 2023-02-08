@@ -7,7 +7,8 @@ from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 
-from lifecycle.source_ldap3 import LifecycleException, SourceLDAP3
+from lifecycle import LifecycleException
+from lifecycle.source_ldap3 import SourceLDAP3
 
 
 def test_config_basic():
