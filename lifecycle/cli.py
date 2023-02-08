@@ -62,6 +62,22 @@ def main():
         current_source = Source(config.config.source)
         current_source.fetch()
 
+    if "targets" in config.config:
+        for target in config.config.targets:
+            try:
+                target_mod = importlib.import_module(
+                    f"lifecycle.target_{target.module.lower()}",
+                )
+            except ModuleNotFoundError:
+                logging.warning(
+                    "No module found for target '%s', skipping", target.module
+                )
+                continue
+            # pylint: disable-msg=invalid-name
+            Target = getattr(target_mod, f"Target{target.module}")
+            current_target = Target(target, current_source)
+            current_target.process_stages()
+
 
 if __name__ == "__main__":
     main()
