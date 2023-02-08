@@ -5,7 +5,7 @@ import dataclasses
 import re
 from typing import Dict, List
 
-from lifecycle.models import Group, User
+from .models import Group, User
 
 
 class ModelDifferenceError(Exception):
