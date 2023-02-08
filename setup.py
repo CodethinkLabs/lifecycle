@@ -6,7 +6,7 @@ from setuptools import find_packages, setup
 setup(
     name="lifecycle",
     packages=find_packages(exclude=("tests", "tests.*")),
-    install_requires=["addict", "ldap3", "pyyaml"],
+    install_requires=["addict", "ldap3", "PyJWT", "pyyaml", "requests"],
     extras_require={
         "dev": [
             "pre-commit",
