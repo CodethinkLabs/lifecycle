@@ -5,7 +5,7 @@ from typing import Dict
 
 import ldap3
 
-from . import LifecycleException
+from . import LifecycleException, SourceBase
 from .models import Group, User
 
 
@@ -13,18 +13,10 @@ class AuthenticationException(LifecycleException):
     """Raised when the binding fails"""
 
 
-class SourceLDAP3:
+class SourceLDAP3(SourceBase):
     """Given an ldap server config, will collect user and groups from said LDAP server"""
 
-    config = {}
-
-    def __init__(self, config=None):
-        """Create an LDAP source.  If config is supplied automatically reconfigure."""
-        if config:
-            self.reconfigure(config)
-        self.users = {}
-
-    def reconfigure(self, config):
+    def configure(self, config: Dict):
         """Apply new configuration to object.
 
         The newly supplied config entry will be merged over the existing config.
@@ -50,9 +42,7 @@ class SourceLDAP3:
             "anonymous_bind": False,
             "use_ssl": True,
         }
-
-        self.config.update(default_config)
-        self.config.update(config)
+        return default_config | config
 
     def connect(self):
         """Connect to LDAP server using current configuration and return the connection"""
