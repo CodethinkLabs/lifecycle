@@ -2,6 +2,7 @@
 
 from ast import literal_eval
 import glob
+import logging
 import os
 import os.path
 import string
@@ -24,7 +25,7 @@ class ConfigReader:
         elif os.path.isfile(file):
             filelist = [file]
         else:
-            print(f"Specified config file couldn't be found! {file}!")
+            logging.error("Specified config file couldn't be found: %s", file)
             sys.exit(1)
 
         for current_file in filelist:
@@ -32,8 +33,11 @@ class ConfigReader:
                 try:
                     self.config_raw.update(yaml.safe_load(config_file))
                 except (yaml.YAMLError, ValueError) as exc:
-                    print(f"Config read failed when parsing {current_file}!")
-                    print(f"Error was: {exc}")
+                    logging.error(
+                        "Config read failed when parsing %s! Error was: %s",
+                        current_file,
+                        str(exc),
+                    )
                     sys.exit(1)
 
         if not raw:
@@ -43,8 +47,9 @@ class ConfigReader:
                 )
                 self.config = Dict(config_dict)
             except KeyError as exc:
-                print(
-                    f"The environment variable {exc} used in your config file wasn't provided!"
+                logging.error(
+                    "The environment variable %s used in your config file wasn't provided!",
+                    str(exc),
                 )
                 sys.exit(1)
         else:
