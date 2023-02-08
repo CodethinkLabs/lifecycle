@@ -1,13 +1,15 @@
 """Source for pulling users and groups from LDAP """
 
-import sys
-
 import ldap3
 
 from lifecycle.models import Group, User
 
 
-class AuthenticationException(Exception):
+class LifecycleException(Exception):
+    """Generic Lifecycle exception. Base class for all the others"""
+
+
+class AuthenticationException(LifecycleException):
     """Raised when the binding fails"""
 
 
@@ -27,21 +29,22 @@ class SourceLDAP3:
 
         The newly supplied config entry will be merged over the existing config.
         """
-        error = None
+        errors = []
 
         if not isinstance(config, dict):
-            error = "You must provide a configuration dict to use this function"
+            errors.append("You must provide a configuration dict to use this function")
         if "url" not in config:
-            error = "'url' must be specified"
+            errors.append("'url' must be specified")
         if "base_dn" not in config:
-            error = "Base DN must be specified"
+            errors.append("Base DN must be specified")
         if not ("bind_dn" in config and "bind_password" in config) and not config.get(
             "anonymous_bind", False
         ):
-            error = "Please either specify a user DN & password, or set anonymous_bind to true"
-        if error:
-            print(error)
-            sys.exit(1)
+            errors.append(
+                "Please either specify a user DN & password, or set anonymous_bind to true"
+            )
+        if errors:
+            raise LifecycleException("\n".join(errors))
 
         default_config = {
             "anonymous_bind": False,
