@@ -5,7 +5,7 @@ from typing import Dict
 
 import ldap3
 
-from lifecycle.models import Group, User
+from .models import Group, User
 
 
 class LifecycleException(Exception):
