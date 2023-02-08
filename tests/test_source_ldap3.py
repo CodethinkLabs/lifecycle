@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 
-from lifecycle.source_ldap3 import SourceLDAP3
+from lifecycle.source_ldap3 import LifecycleException, SourceLDAP3
 
 
 def test_config_basic():
@@ -27,20 +27,19 @@ def test_config_basic():
 
 def test_config_no_creds():
     """LDAP Source with no credentials or anonymous_bind should fail"""
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
+    with pytest.raises(LifecycleException) as pytest_wrapped_e:
         SourceLDAP3(
             config={
                 "url": "ldap://ldap.example.org",
                 "base_dn": "dc=example,dc=org",
             }
         )
-    assert pytest_wrapped_e.type == SystemExit
-    assert pytest_wrapped_e.value.code == 1
+    assert pytest_wrapped_e.type == LifecycleException
 
 
 def test_config_no_creds_anon_false():
     """LDAP Source with no credentials and anonymous_bind set to false should fail"""
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
+    with pytest.raises(LifecycleException) as pytest_wrapped_e:
         SourceLDAP3(
             config={
                 "url": "ldap://ldap.example.org",
@@ -48,8 +47,7 @@ def test_config_no_creds_anon_false():
                 "anonymous_bind": False,
             }
         )
-    assert pytest_wrapped_e.type == SystemExit
-    assert pytest_wrapped_e.value.code == 1
+    assert pytest_wrapped_e.type == LifecycleException
 
 
 def test_config_with_creds():
