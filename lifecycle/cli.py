@@ -2,6 +2,7 @@
 
 import argparse
 import importlib
+import logging
 import sys
 
 from lifecycle.config_reader import ConfigReader
@@ -28,22 +29,27 @@ def parse_args():
         help="config file location.  Either a single file or a folder of yaml files.",
         default="config/",
     )
+    parser.add_argument(
+        "-d",
+        "--debug",
+        help="enable debug mode",
+        action="store_true",
+    )
     return parser.parse_args()
 
 
 def main():
     """Entry point for the lifecyle cli"""
     args = parse_args()
+    logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
 
     config = ConfigReader(args.file, args.configraw)
     if args.configcheck:
         if args.configraw:
-            print("Raw config check requested.  Config is:")
-            print("")
+            logging.info("Raw config check requested.  Config is:\n")
             config.print_raw()
         else:
-            print("Config check requested.  Config is:")
-            print("")
+            logging.info("Config check requested.  Config is:\n")
             config.print()
         sys.exit(0)
 
