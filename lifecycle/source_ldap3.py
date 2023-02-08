@@ -1,5 +1,7 @@
 """Source for pulling users and groups from LDAP """
 
+import logging
+
 import ldap3
 
 from lifecycle.models import Group, User
@@ -109,7 +111,7 @@ class SourceLDAP3:
                     )
                     self.users[uid] = user
         else:
-            print("No User accounts :()")
+            logging.debug("No user accounts found")
 
     def fetch_groups(self):
         """Load the LDAP groups"""
@@ -139,3 +141,5 @@ class SourceLDAP3:
                         uid = components[0].split("=")[1]
                         if uid in self.users:
                             self.users[uid].groups.append(group)
+        else:
+            logging.debug("No groups found")
