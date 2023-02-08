@@ -1,6 +1,7 @@
 """Source for pulling users and groups from LDAP """
 
 import logging
+from typing import Dict
 
 import ldap3
 
@@ -75,8 +76,11 @@ class SourceLDAP3:
         self.fetch_users()
         self.fetch_groups()
 
-    def fetch_users(self):
+    def fetch_users(self, refresh: bool = False) -> Dict[str, User]:
         """Load the LDAP users"""
+        if not refresh and self.users:
+            return self.users
+
         connection = self.connect()
 
         connection.search(
@@ -110,8 +114,10 @@ class SourceLDAP3:
                         locked=locked,
                     )
                     self.users[uid] = user
-        else:
-            logging.debug("No user accounts found")
+            return self.users
+
+        logging.debug("No user accounts found")
+        return {}
 
     def fetch_groups(self):
         """Load the LDAP groups"""
