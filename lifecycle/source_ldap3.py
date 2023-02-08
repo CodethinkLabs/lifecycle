@@ -81,6 +81,7 @@ class SourceLDAP3:
         if not refresh and self.users:
             return self.users
 
+        users = {}
         connection = self.connect()
 
         connection.search(
@@ -113,8 +114,9 @@ class SourceLDAP3:
                         groups=[],
                         locked=locked,
                     )
-                    self.users[uid] = user
-            return self.users
+                    users[uid] = user
+            self.users = users
+            return users
 
         logging.debug("No user accounts found")
         return {}
