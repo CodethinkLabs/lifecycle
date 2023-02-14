@@ -9,6 +9,8 @@ Chat to us in #lifecycle if you've got any ideas you're interested in contributi
 
 ## Development
 
+### Python Environment
+
 To set up a local development environment, create a python virtual environment,
 using `venv` or similar, e.g.:
 
@@ -20,6 +22,12 @@ To then configure the development environment run:
         pip install pipenv && \
         pipenv install && \
         pre-commit install && \
+
+### FreeIPA or LDAP
+
+When developing code to use with a FreeIPA server, the script in
+examples/freeipa-server.sh will be a useful starting point in having
+a small FreeIPA or LDAP server to test against.
 
 ## Merge Requests
 
