@@ -54,25 +54,38 @@ def main():
         sys.exit(0)
 
     if "source" in config.config:
-        source_mod = importlib.import_module(
-            f"lifecycle.source_{config.config.source.module.lower()}",
-        )
+        if not isinstance(config.config.source.module, str):
+            logging.error("Given source module name isn't a string")
+            sys.exit(1)
+        try:
+            source_mod = importlib.import_module(
+                f"lifecycle.source_{config.config.source.module.lower()}",
+            )
+        except ModuleNotFoundError:
+            logging.error(
+                "No module found for source '%s'", config.config.source.module
+            )
+            sys.exit(1)
         # pylint: disable-msg=invalid-name
         Source = getattr(source_mod, f"Source{config.config.source.module}")
         current_source = Source(config.config.source)
         current_source.fetch()
+    else:
+        logging.error("Source config missing")
+        sys.exit(1)
 
     if "targets" in config.config:
         for target in config.config.targets:
+            if not isinstance(target.module, str):
+                logging.error("Given target module name isn't a string")
+                sys.exit(1)
             try:
                 target_mod = importlib.import_module(
                     f"lifecycle.target_{target.module.lower()}",
                 )
             except ModuleNotFoundError:
-                logging.warning(
-                    "No module found for target '%s', skipping", target.module
-                )
-                continue
+                logging.error("No module found for target '%s'", target.module)
+                sys.exit(1)
             # pylint: disable-msg=invalid-name
             Target = getattr(target_mod, f"Target{target.module}")
             current_target = Target(target, current_source)
