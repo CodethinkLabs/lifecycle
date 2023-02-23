@@ -1,0 +1,4 @@
+[submodule "examples/suitecrm/bitnami-containers"]
+	path = examples/suitecrm/bitnami-containers
+	url = https://github.com/bitnami/containers
+	branch = main
