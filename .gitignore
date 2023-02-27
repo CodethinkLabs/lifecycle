@@ -6,3 +6,5 @@ __pycache__
 /build
 .venv/
 /examples/suitecrm/suitecrm.yml
+/docs/build
+/docs/source/generated
