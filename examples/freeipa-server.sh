@@ -1,5 +1,5 @@
 #!/bin/bash
-set -eux
+set -em
 
 # This is a basic script that will create a freeipa server in a container,
 # populate it with some testing data, then run lifecycle against it.
@@ -19,56 +19,77 @@ if ! command -v pipenv &>/dev/null; then
     exit
 fi
 
-# Delete the old data, if it exists
-sudo rm -rf /var/lib/ipa-data
-sudo mkdir /var/lib/ipa-data
+SCRIPTDIR="$(realpath "$(dirname "$0")")"
+CONTAINER=freeipa_freeipa_1
 
-# Generate a random password
-PASSWORD="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13)"
+if [ -z "$FORCE_NEW_IMAGE" ]; then
+    echo "FORCE_NEW_IMAGE not found, set 'FORCE_NEW_IMAGE=yes' in the environment to always create a fresh FreeIPA container"
+fi
 
-echo "This container's admin password is ${PASSWORD}"
+LIFECYCLE_CONFIG_FILE="freeipa.yml"
+if [ -z "$LIFECYCLE_CONFIG_PATH" ]; then
+  LIFECYCLE_CONFIG_PATH="$SCRIPTDIR/$LIFECYCLE_CONFIG_FILE"
+  echo "LIFECYCLE_CONFIG_PATH not found, defaulting to '$LIFECYCLE_CONFIG_PATH'"
+fi
 
-LAST_CHECKED="$(date +%s)"
+if [ "x$FORCE_NEW_IMAGE" = "xyes" ] || ! [ -d "/var/lib/ipa-data" ]; then
+    echo "Creating a new FreeIPA container from scratch..."
 
-# Start the freeipa server container and leave it to start up in the background
-CONTAINER="$(sudo podman run --detach -h ipa.example.test --read-only \
-    -v /var/lib/ipa-data:/data:Z \
-    -e PASSWORD=${PASSWORD} \
-    docker.io/freeipa/freeipa-server:rocky-9 ipa-server-install -U -r EXAMPLE.TEST --no-ntp)"
+    sudo podman container stop "$CONTAINER" || true
+    sudo podman container rm "$CONTAINER" || true
 
+    # Delete the old data, if it exists
+    sudo rm -rf /var/lib/ipa-data
+    sudo mkdir /var/lib/ipa-data
 
-sleep 1
+    # Generate a random password
+    PASSWORD="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13)"
 
-# The container doesn't exit once it's finished setting up, so watch for it to finish configuring
-set +x
-echo "Waiting for container setup to finish..."
-while [ "x$(sudo podman exec -it "${CONTAINER}" systemctl is-active ipa-server-configure-first.service | tr -d '\r')" = xactivating ]; do
-    sudo podman logs --since="${LAST_CHECKED}" "${CONTAINER}"
+    echo "This container's admin password is ${PASSWORD}"
+
     LAST_CHECKED="$(date +%s)"
+
+    # Start the freeipa server container and leave it to start up in the background
+    sudo podman run -h ipa.example.test --read-only \
+        --name=freeipa_freeipa_1 \
+        -v /var/lib/ipa-data:/data:Z \
+        -e PASSWORD=${PASSWORD} \
+        docker.io/freeipa/freeipa-server:rocky-9 ipa-server-install -U -r EXAMPLE.TEST --no-ntp \
+        >/dev/null 2>&1 &
+
     sleep 1
-done
-set -x
 
-echo "Restarting the container because kerberos is a bit fragile"
-sudo podman restart "${CONTAINER}"
+    # The container doesn't exit once it's finished setting up, so watch for it to finish configuring
+    echo "Waiting for container setup to finish..."
+    while [ "x$(sudo podman exec -it "${CONTAINER}" systemctl is-active ipa-server-configure-first.service | tr -d '\r')" = xactivating ]; do
+        sudo podman logs --since="${LAST_CHECKED}" "${CONTAINER}"
+        LAST_CHECKED="$(date +%s)"
+        sleep 1
+    done
 
-sleep 5
+    echo "Restarting the container because kerberos is a bit fragile"
+    sudo podman restart "${CONTAINER}"
 
-echo "Configuring FreeIPA users"
-sudo podman exec -it "${CONTAINER}" /bin/bash -c "echo ${PASSWORD} | kinit admin && ipa user-add testuser --first=Test --last=User"
-sudo podman exec -it "${CONTAINER}" /bin/bash -c "echo ${PASSWORD} | kinit admin && ipa user-add testuser2 --first=Test2 --last=User"
-sudo podman exec -it "${CONTAINER}" /bin/bash -c "echo ${PASSWORD} | kinit admin && ipa group-add testgroup"
-sudo podman exec -it "${CONTAINER}" /bin/bash -c "echo ${PASSWORD} | kinit admin && ipa group-add-member testgroup --users=testuser"
+    sleep 5
+
+    echo "Configuring FreeIPA users"
+    sudo podman exec -it "${CONTAINER}" /bin/bash -c "echo ${PASSWORD} | kinit admin && ipa user-add testuser --first=Test --last=User"
+    sudo podman exec -it "${CONTAINER}" /bin/bash -c "echo ${PASSWORD} | kinit admin && ipa user-add testuser2 --first=Test2 --last=User"
+    sudo podman exec -it "${CONTAINER}" /bin/bash -c "echo ${PASSWORD} | kinit admin && ipa group-add testgroup"
+    sudo podman exec -it "${CONTAINER}" /bin/bash -c "echo ${PASSWORD} | kinit admin && ipa group-add-member testgroup --users=testuser"
+
+else
+    sudo podman start --attach "${CONTAINER}" >/dev/null 2>&1 &
+    PASSWORD="$(sudo podman inspect ${CONTAINER} | jq .[0].Config.Env | grep -o 'PASSWORD=[[:alnum:]]\+' | cut -d'=' -f2)"
+fi
 
 sleep 5
 
 CONTAINER_IP="$( sudo podman inspect --format '{{ .NetworkSettings.IPAddress }}' "${CONTAINER}" )"
-echo "Testing LDAP server"
-#ldapsearch -H ldap://${CONTAINER_IP} -D uid=admin,cn=users,cn=accounts,dc=example,dc=test -w "${PASSWORD}" '(objectclass=organizationalPerson)'
+echo "Retrieved freeipa server IP address '${CONTAINER_IP}'"
 
-CONFIGFILE="$(mktemp)"
-
-cat >"${CONFIGFILE}" <<EOF
+echo "Creating lifecycle config file at '$LIFECYCLE_CONFIG_PATH'"
+cat >"${LIFECYCLE_CONFIG_PATH}" <<EOF
 source:
   module: LDAP3
   url: ldap://${CONTAINER_IP}
@@ -77,4 +98,8 @@ source:
   bind_password: ${PASSWORD}
 EOF
 
-pipenv run lifecycle --debug -f "${CONFIGFILE}"
+echo "Container startup is complete, waiting for Ctrl-C before cleaning up"
+fg
+
+echo "Cleaning up"
+rm -f "$LIFECYCLE_CONFIG_PATH"
