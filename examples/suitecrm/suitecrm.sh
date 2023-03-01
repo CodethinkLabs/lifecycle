@@ -62,14 +62,23 @@ sudo openssl rsa -in "$KEYDIR/private.key" -pubout -out "$KEYDIR/public.key"
 sudo chown 1:1 "$KEYDIR/private.key" "$KEYDIR/public.key"
 sudo chmod 0660 "$KEYDIR/public.key"
 
-echo "Configuring OAuth2 user entry"
 # Configure an OAuth2 user
 OAUTH_USER_NAME="user"
 OAUTH_CLIENT_ID=c1c3dfd8-2e58-b193-5fcb-63f5fdcd6903
 OAUTH_CLIENT_NAME=testuser
 OAUTH_CLIENT_SECRET="mysecret"
 OAUTH_CLIENT_SECRET_SUM="$(echo -n "$OAUTH_CLIENT_SECRET" | sha256sum | awk '{print $1}')"
-sudo docker exec -i suitecrm_mariadb_1 mysql --user=bn_suitecrm --password=bitnami123 --database=bitnami_suitecrm <<EOF
+DB_USER="bn_suitecrm"
+DB_PASSWORD="bitnami123"
+DB_NAME="bitnami_suitecrm"
+
+echo "Waiting for the mariadb database to be ready..."
+while ! docker exec suitecrm_mariadb_1 mysql --user="$DB_USER" --password="$DB_PASSWORD" -e "status" >/dev/null 2>&1; do
+    sleep 1
+done
+
+echo "Configuring OAuth2 user entry"
+sudo docker exec -i suitecrm_mariadb_1 mysql --user="$DB_USER" --password="$DB_PASSWORD" --database="$DB_NAME" <<EOF
 INSERT INTO oauth2clients
 (
   id,
