@@ -73,7 +73,7 @@ DB_PASSWORD="bitnami123"
 DB_NAME="bitnami_suitecrm"
 
 echo "Waiting for the mariadb database to be ready..."
-while ! docker exec suitecrm_mariadb_1 mysql --user="$DB_USER" --password="$DB_PASSWORD" -e "status" >/dev/null 2>&1; do
+while ! sudo docker exec suitecrm_mariadb_1 mysql --user="$DB_USER" --password="$DB_PASSWORD" -e "status" >/dev/null 2>&1; do
     sleep 1
 done
 
