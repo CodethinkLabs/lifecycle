@@ -32,7 +32,6 @@ class TargetSuiteCRM(TargetBase):
 
     optional_fields = {
         "api_page_size",
-        "module",
         "stages",
         "users_cleanup",
         "excluded_usernames",

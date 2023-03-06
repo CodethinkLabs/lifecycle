@@ -21,7 +21,6 @@ class SourceLDAP3(SourceBase):
         "bind_dn",
         "bind_password",
         "anonymous_bind",
-        "module",
         "use_ssl",
     }
     default_config = {
