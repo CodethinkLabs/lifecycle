@@ -17,6 +17,45 @@ class ConfigException(LifecycleException):
     """Exception relating to configuration errors"""
 
 
+class ConfigUnexpectedType(ConfigException):
+    """Exception caused by configure() method returning an unexpected type"""
+
+    def __init__(self, origin_class, config):
+        self.origin_class = origin_class
+        self.config = config
+        self.message = (
+            f"{origin_class.__name__}.configure() returned an "
+            + f"unexpected type. Returned config was '{config}'"
+        )
+        super().__init__(self.message)
+
+
+class ConfigMissingFields(ConfigException):
+    """Exception caused by config having missing fields"""
+
+    def __init__(self, missing_fields, config):
+        self.config = config
+        self.missing_fields = missing_fields
+        self.message = (
+            f"Config dict has fields '{config.keys()}', "
+            + f"missing fields '{missing_fields}'"
+        )
+        super().__init__(self.message)
+
+
+class ConfigUnexpectedFields(ConfigException):
+    """Exception caused by config having unexpected fields"""
+
+    def __init__(self, unexpected_fields, config):
+        self.config = config
+        self.unexpected_fields = unexpected_fields
+        self.message = (
+            f"Config dict has fields '{config.keys()}', "
+            + "unexpected fields '{unexpected_fields}'"
+        )
+        super().__init__(self.message)
+
+
 class _Base(ABC):
     """Abstract base class for sources and targets"""
 
@@ -29,22 +68,26 @@ class _Base(ABC):
 
         self.config = self.configure(config)
         if not isinstance(self.config, Mapping):
-            raise ConfigException(
-                f"{self.__class__.__name__}.configure() has not set a valid config"
-            )
+            raise ConfigUnexpectedType(self.__class__, config)
+
+    @staticmethod
+    def _check_fields(_dict: Dict, mandatory_fields: set, optional_fields: set):
+        """Check a dictionary's fields are valid
+
+        :raises ConfigMissingFields: If there are missing fields
+        :raises ConfigUnexpectedFields: If there are unexpected fields
+        """
+        missing_fields = mandatory_fields - set(_dict.keys())
+        if missing_fields:
+            raise ConfigMissingFields(missing_fields, _dict)
+        unexpected_fields = set(_dict.keys()) - mandatory_fields - optional_fields
+        if unexpected_fields:
+            raise ConfigUnexpectedFields(unexpected_fields, _dict)
 
     def configure(self, config: Dict) -> Dict:
         """Apply defaults to loaded configs and perform validation"""
-        missing_fields = self.mandatory_fields - set(config.keys())
-        if missing_fields:
-            raise LifecycleException(f"Missing fields: '{' '.join(missing_fields)}'")
-        unexpected_fields = (
-            set(config.keys()) - self.mandatory_fields - self.optional_fields
-        )
-        if unexpected_fields:
-            raise LifecycleException(
-                f"Unxpected fields: '{' '.join(unexpected_fields)}'"
-            )
+        self._check_fields(config, self.mandatory_fields, self.optional_fields)
+
         return self.default_config | config
 
     @abstractmethod
