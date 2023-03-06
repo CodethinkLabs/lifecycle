@@ -68,6 +68,7 @@ def main():
             sys.exit(1)
         # pylint: disable-msg=invalid-name
         Source = getattr(source_mod, f"Source{config.config.source.module}")
+        del config.config.source.module
         current_source = Source(config.config.source)
         current_source.fetch()
     else:
@@ -88,6 +89,7 @@ def main():
                 sys.exit(1)
             # pylint: disable-msg=invalid-name
             Target = getattr(target_mod, f"Target{target.module}")
+            del target.module
             current_target = Target(target, current_source)
             current_target.process_stages()
 
