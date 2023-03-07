@@ -192,4 +192,23 @@ class TargetSuiteCRM(TargetBase):
                 self._request("/Api/V8/module", method="PATCH", json=deletion_record)
 
     def users_sync(self, diff: ModelDifference):
-        pass
+        """Sync the existing users with their values from the source"""
+        for user in diff.changed_users.values():
+            _id = self._users_data[user.username]["id"]
+            if user.username not in self.config["excluded_usernames"]:
+                updated_record = {
+                    "data": {
+                        "type": "User",
+                        "id": _id,
+                        "attributes": {
+                            "user_name": user.username,
+                            "last_name": user.surname,
+                            "full_name": user.fullname,
+                            "name": user.fullname,
+                            "email1": user.email[0] if user.email else "",
+                            "status": "Inactive" if user.locked else "Active",
+                        },
+                    }
+                }
+                logging.info("Updating user '%s'", user.username)
+                self._request("/Api/V8/module", method="PATCH", json=updated_record)
