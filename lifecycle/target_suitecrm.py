@@ -21,6 +21,7 @@ class TargetSuiteCRM(TargetBase):
 
         self._token = None
         self._token_expiry = 0
+        self._users_data = {}
 
     mandatory_fields = {
         "url",
@@ -121,13 +122,15 @@ class TargetSuiteCRM(TargetBase):
             return self.users
 
         users = {}
+        users_data = {}
 
         _json = list(self._iter_pages("/Api/V8/module/Users"))
 
         for obj in _json:
             attributes = obj["attributes"]
+            username = attributes["user_name"]
             user = User(
-                username=attributes["user_name"],
+                username=username,
                 forename=attributes["first_name"],
                 surname=attributes["last_name"],
                 fullname=attributes["full_name"],
@@ -135,9 +138,12 @@ class TargetSuiteCRM(TargetBase):
                 groups=[],
                 locked=attributes["status"].lower() != "active",
             )
-            users[obj["id"]] = user
+            users[username] = user
+            users_data[username] = obj
+
         logging.debug("Users fetched from server: '%s'", users)
         self.users = users
+        self._users_data = users_data
         return users
 
     def users_create(self, diff: ModelDifference):
@@ -165,7 +171,8 @@ class TargetSuiteCRM(TargetBase):
         """Remove any users missing from the source"""
         logging.debug("Started cleaning users")
         logging.debug("Excluded usernames: %s", self.config["excluded_usernames"])
-        for _id, user in diff.removed_users.items():
+        for user in diff.removed_users.values():
+            _id = self._users_data[user.username]["id"]
             logging.debug(
                 "Attempting to delete: %s. Is user excluded: %s",
                 user.username,
