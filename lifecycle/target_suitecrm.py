@@ -179,9 +179,17 @@ class TargetSuiteCRM(TargetBase):
                 user.username in self.config["excluded_usernames"],
             )
             if user.username not in self.config["excluded_usernames"]:
+                deletion_record = {
+                    "data": {
+                        "type": "User",
+                        "id": _id,
+                        "attributes": {
+                            "deleted": 1,
+                        },
+                    }
+                }
                 logging.debug("Deleting user: %s", user.username)
-                _json = self._request(f"/Api/v8/module/User/{_id}", method="GET").json()
-                self._request(f"/Api/v8/module/User/{_id}", method="DELETE")
+                self._request("/Api/V8/module", method="PATCH", json=deletion_record)
 
     def users_sync(self, diff: ModelDifference):
         pass
