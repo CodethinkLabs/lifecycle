@@ -74,6 +74,7 @@ class TargetBase(_Base):
         source_users = self.source.fetch_users()
         target_users = self.fetch_users()
         diff_config = ModelDifferenceConfig(
+            # pylint: disable=fixme
             # TODO: Include groups.
             fields=[
                 "username",
