@@ -16,33 +16,27 @@ class AuthenticationException(LifecycleException):
 class SourceLDAP3(SourceBase):
     """Given an ldap server config, will collect user and groups from said LDAP server"""
 
+    mandatory_fields = {"base_dn", "url"}
+    optional_fields = {
+        "bind_dn",
+        "bind_password",
+        "anonymous_bind",
+        "module",
+        "use_ssl",
+    }
+    default_config = {
+        "anonymous_bind": False,
+        "use_ssl": True,
+    }
+
     def configure(self, config: Dict):
-        """Apply new configuration to object.
-
-        The newly supplied config entry will be merged over the existing config.
-        """
-        errors = []
-
-        if not isinstance(config, dict):
-            errors.append("You must provide a configuration dict to use this function")
-        if "url" not in config:
-            errors.append("'url' must be specified")
-        if "base_dn" not in config:
-            errors.append("Base DN must be specified")
         if not ("bind_dn" in config and "bind_password" in config) and not config.get(
             "anonymous_bind", False
         ):
-            errors.append(
+            raise LifecycleException(
                 "Please either specify a user DN & password, or set anonymous_bind to true"
             )
-        if errors:
-            raise LifecycleException("\n".join(errors))
-
-        default_config = {
-            "anonymous_bind": False,
-            "use_ssl": True,
-        }
-        return default_config | config
+        return super().configure(config)
 
     def connect(self):
         """Connect to LDAP server using current configuration and return the connection"""

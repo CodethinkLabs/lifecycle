@@ -20,6 +20,10 @@ class ConfigException(LifecycleException):
 class _Base(ABC):
     """Abstract base class for sources and targets"""
 
+    mandatory_fields = set()
+    optional_fields = set()
+    default_config = {}
+
     def __init__(self, config: Dict):
         self.users = {}
 
@@ -29,9 +33,19 @@ class _Base(ABC):
                 f"{self.__class__.__name__}.configure() has not set a valid config"
             )
 
-    @abstractmethod
     def configure(self, config: Dict) -> Dict:
         """Apply defaults to loaded configs and perform validation"""
+        missing_fields = self.mandatory_fields - set(config.keys())
+        if missing_fields:
+            raise LifecycleException(f"Missing fields: '{' '.join(missing_fields)}'")
+        unexpected_fields = (
+            set(config.keys()) - self.mandatory_fields - self.optional_fields
+        )
+        if unexpected_fields:
+            raise LifecycleException(
+                f"Unxpected fields: '{' '.join(unexpected_fields)}'"
+            )
+        return self.default_config | config
 
     @abstractmethod
     def fetch_users(self, refresh: bool = False) -> Dict[str, User]:

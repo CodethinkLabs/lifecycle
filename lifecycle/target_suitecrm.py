@@ -8,7 +8,7 @@ from urllib.parse import urljoin
 import jwt
 import requests
 
-from . import LifecycleException, TargetBase
+from . import TargetBase
 from .model_diff import ModelDifference
 from .models import User
 
@@ -22,30 +22,27 @@ class TargetSuiteCRM(TargetBase):
         self._token = None
         self._token_expiry = 0
 
-    def configure(self, config: Dict):
-        """Apply new configuration to object.
+    mandatory_fields = {
+        "url",
+        "api_client_id",
+        "api_client_secret",
+        "api_username",
+        "api_password",
+    }
 
-        The newly supplied config entry will be merged over the existing config.
-        """
-        errors = []
-        for key in (
-            "url",
-            "api_client_id",
-            "api_client_secret",
-            "api_username",
-            "api_password",
-        ):
-            if key not in config:
-                errors.append(f"Required key '{key}' missing from {config['module']}")
-        if errors:
-            raise LifecycleException("\n".join(errors))
+    optional_fields = {
+        "api_page_size",
+        "module",
+        "stages",
+        "users_cleanup",
+        "excluded_usernames",
+    }
 
-        defaults = {
-            "api_page_size": 20,
-            "stages": ["users_create", "users_sync", "users_disable", "users_cleanup"],
-            "excluded_usernames": [],
-        }
-        return defaults | config
+    default_config = {
+        "api_page_size": 20,
+        "stages": ["users_create", "users_sync", "users_disable", "users_cleanup"],
+        "excluded_usernames": [],
+    }
 
     def _authenticate(self):
         """Authenticate with SuiteCRM and acquire an access token"""
