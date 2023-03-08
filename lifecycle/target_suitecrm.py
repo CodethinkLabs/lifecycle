@@ -152,7 +152,7 @@ class TargetSuiteCRM(TargetBase):
                         "full_name": user.fullname,
                         "name": user.fullname,
                         "external_auth_only": 1,
-                        "email1": user.email,
+                        "email1": user.email[0] if user.email else "",
                         "status": "Inactive" if user.locked else "Active",
                     },
                 }
