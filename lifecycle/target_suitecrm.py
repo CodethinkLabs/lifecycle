@@ -58,6 +58,7 @@ class TargetSuiteCRM(TargetBase):
                 "password": self.config["api_password"],
             },
         )
+        logging.debug("Authentication response '%s'", response.text)
 
         self._token = response.json()["access_token"]
         self._token_expiry = jwt.decode(
@@ -90,13 +91,17 @@ class TargetSuiteCRM(TargetBase):
                     "Authorization": f"Bearer {self._get_token()}",
                 }
             )
-
-        response = requests.request(method, url, headers=headers, timeout=30, **kwargs)
+        logging.debug("HTTP Request JSON (if any):  %s", kwargs.get("json", ""))
+        logging.debug("SuiteCRM url is: '%s'", url)
+        response = requests.request(
+            method, url, headers=headers, timeout=30, **kwargs, allow_redirects=False
+        )
         response.raise_for_status()
         return response
 
     def _iter_pages(self, endpoint: str, page: int = 1):
         """Generator for handling paginated responses from the SuiteCRM API"""
+        logging.debug("Iterating through entries")
         params = {
             "page[size]": self.config["api_page_size"],
             "page[number]": page,
@@ -108,6 +113,7 @@ class TargetSuiteCRM(TargetBase):
         while page != total_pages:
             page += 1
             yield from self._iter_pages(endpoint, page)
+        logging.debug("Done iterating")
 
     def fetch_users(self, refresh: bool = False) -> Dict[str, User]:
         """Load the SuiteCRM users"""
@@ -130,7 +136,7 @@ class TargetSuiteCRM(TargetBase):
                 locked=attributes["status"].lower() != "active",
             )
             users[obj["id"]] = user
-
+        logging.debug("Users fetched from server: '%s'", users)
         self.users = users
         return users
 
@@ -151,12 +157,21 @@ class TargetSuiteCRM(TargetBase):
                     },
                 }
             }
-            logging.info("Creating user: %s", user.username)
+            logging.debug("Creating user: '%s'", user)
             self._request("/Api/V8/module", method="POST", json=new_user)
+            logging.debug("User created successfully")
 
     def users_cleanup(self, diff: ModelDifference):
         """Remove any users missing from the source"""
+        logging.debug("Started cleaning users")
+        logging.debug("Excluded usernames: %s", self.config["excluded_usernames"])
         for _id, user in diff.removed_users.items():
+            logging.debug(
+                "Attempting to delete: %s. Is user excluded: %s",
+                user.username,
+                user.username in self.config["excluded_usernames"],
+            )
             if user.username not in self.config["excluded_usernames"]:
-                logging.info("Deleting user: %s", user.username)
-            self._request(f"/Api/v8/module/Users/{_id}", method="DELETE")
+                logging.debug("Deleting user: %s", user.username)
+                _json = self._request(f"/Api/v8/module/User/{_id}", method="GET").json()
+                self._request(f"/Api/v8/module/User/{_id}", method="DELETE")
