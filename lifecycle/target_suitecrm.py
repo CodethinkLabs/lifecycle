@@ -175,3 +175,6 @@ class TargetSuiteCRM(TargetBase):
                 logging.debug("Deleting user: %s", user.username)
                 _json = self._request(f"/Api/v8/module/User/{_id}", method="GET").json()
                 self._request(f"/Api/v8/module/User/{_id}", method="DELETE")
+
+    def users_sync(self, diff: ModelDifference):
+        pass
