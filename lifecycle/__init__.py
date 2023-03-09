@@ -62,6 +62,7 @@ class _Base(ABC):
     mandatory_fields = set()
     optional_fields = set()
     default_config = {}
+    supported_user_fields = User.supported_fields()
 
     def __init__(self, config: Dict):
         self.users = {}
@@ -117,16 +118,7 @@ class TargetBase(_Base):
         source_users = self.source.fetch_users()
         target_users = self.fetch_users()
         diff_config = ModelDifferenceConfig(
-            # pylint: disable=fixme
-            # TODO: Include groups.
-            fields=[
-                "username",
-                "forename",
-                "surname",
-                "fullname",
-                "email",
-                "locked",
-            ],
+            fields=self.source.supported_user_fields & self.supported_user_fields,
             groups_patterns=[],
         )
         difference = ModelDifference.calculate(source_users, target_users, diff_config)

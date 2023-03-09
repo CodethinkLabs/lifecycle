@@ -1,6 +1,5 @@
 """Source that pulls user models from a static config file"""
 
-import dataclasses
 import logging
 from typing import Dict
 
@@ -30,26 +29,6 @@ class SourceStaticConfig(SourceBase):
 
     mandatory_fields = {"users", "groups"}
 
-    @staticmethod
-    def _mandatory_fields(data_class) -> set[str]:
-        """A field in a dataclass is mandatory if it has no default"""
-        return {
-            field.name
-            for field in dataclasses.fields(data_class)
-            if field.default is dataclasses.MISSING
-            and field.default_factory is dataclasses.MISSING
-        }
-
-    @staticmethod
-    def _optional_fields(data_class) -> set[str]:
-        """A field in a dataclass is optional if it has a default"""
-        return {
-            field.name
-            for field in dataclasses.fields(data_class)
-            if field.default is not dataclasses.MISSING
-            or field.default_factory is not dataclasses.MISSING
-        }
-
     def configure(self, config):
         # Calls _check_fields on the dict twice, but we need to check the fields exist
         # before we inspect their contents
@@ -57,12 +36,16 @@ class SourceStaticConfig(SourceBase):
 
         for user in config["users"]:
             self._check_fields(
-                user, self._mandatory_fields(User), self._optional_fields(User)
+                user,
+                User.mandatory_fields(),
+                User.optional_fields(),
             )
 
         for group in config["groups"]:
             self._check_fields(
-                group, self._mandatory_fields(Group), self._optional_fields(Group)
+                group,
+                Group.mandatory_fields(),
+                Group.optional_fields(),
             )
 
         return super().configure(config)
@@ -84,7 +67,7 @@ class SourceStaticConfig(SourceBase):
 
             fields = {
                 field: config_user[field]
-                for field in self._optional_fields(User)
+                for field in User.optional_fields()
                 if field in config_user and field != "groups"
             }
             self.users[username] = User(username, **fields)
@@ -96,7 +79,7 @@ class SourceStaticConfig(SourceBase):
             name = config_group["name"]
             fields = {
                 field: config_group[field]
-                for field in self._optional_fields(Group)
+                for field in Group.optional_fields()
                 if field in config_group
             }
             group = Group(name, **fields)

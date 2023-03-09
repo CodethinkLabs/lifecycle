@@ -1,10 +1,37 @@
 """ Lifecycle User Model """
 
-from dataclasses import dataclass, field
+from dataclasses import MISSING, dataclass, field, fields
+
+
+class ModelBase:
+    """Common class of Groups and Users"""
+
+    @classmethod
+    def mandatory_fields(cls):
+        """Mandatory fields have no default and *must* be passed into the dataclass' constructor"""
+        return {
+            field.name
+            for field in fields(cls)
+            if field.default is MISSING and field.default_factory is MISSING
+        }
+
+    @classmethod
+    def optional_fields(cls):
+        """Mandatory fields have defaults and *may* be passed into the dataclass' constructor"""
+        return {
+            field.name
+            for field in fields(cls)
+            if field.default is not MISSING or field.default_factory is not MISSING
+        }
+
+    @classmethod
+    def supported_fields(cls):
+        """Supported fields are any field that is present in the data model"""
+        return {field.name for field in fields(cls)}
 
 
 @dataclass(unsafe_hash=True, order=True)
-class Group:
+class Group(ModelBase):
     """internal representation of a group"""
 
     name: str
@@ -13,7 +40,7 @@ class Group:
 
 
 @dataclass(unsafe_hash=True, order=True)
-class User:
+class User(ModelBase):
     """internal representation of a user"""
 
     # pylint: disable-msg=too-many-arguments
