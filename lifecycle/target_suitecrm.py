@@ -38,6 +38,14 @@ class TargetSuiteCRM(TargetBase):
         "excluded_usernames",
     }
 
+    supported_user_fields = {
+        "username",
+        "forename",
+        "surname",
+        "email",
+        "locked",  # also groups once supported
+    }
+
     default_config = {
         "api_page_size": 20,
         "stages": ["users_create", "users_sync", "users_disable", "users_cleanup"],
@@ -155,8 +163,6 @@ class TargetSuiteCRM(TargetBase):
                         "user_name": user.username,
                         "first_name": user.forename,
                         "last_name": user.surname,
-                        "full_name": user.fullname,
-                        "name": user.fullname,
                         "external_auth_only": 1,
                         "email1": user.email[0] if user.email else "",
                         "status": "Inactive" if user.locked else "Active",
@@ -204,8 +210,6 @@ class TargetSuiteCRM(TargetBase):
                             "user_name": user.username,
                             "first_name": user.forename,
                             "last_name": user.surname,
-                            "full_name": user.fullname,
-                            "name": user.fullname,
                             "email1": user.email[0] if user.email else "",
                             "status": "Inactive" if user.locked else "Active",
                         },
