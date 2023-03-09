@@ -153,6 +153,7 @@ class TargetSuiteCRM(TargetBase):
                     "type": "User",
                     "attributes": {
                         "user_name": user.username,
+                        "first_name": user.forename,
                         "last_name": user.surname,
                         "full_name": user.fullname,
                         "name": user.fullname,
@@ -201,6 +202,7 @@ class TargetSuiteCRM(TargetBase):
                         "id": _id,
                         "attributes": {
                             "user_name": user.username,
+                            "first_name": user.forename,
                             "last_name": user.surname,
                             "full_name": user.fullname,
                             "name": user.fullname,
