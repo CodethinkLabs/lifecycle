@@ -251,6 +251,14 @@ class TargetSuiteCRM(TargetBase):
             json=new_relationship,
         )
 
+    def _unassign_email(self, mail_id, username):
+        logging.debug("Unassigning E-mail '%s' from user '%s'", mail_id, username)
+        user_id = self._users_data[username]["id"]
+        self._request(
+            f"/Api/V8/module/Users/{user_id}/relationships/email_addresses/{mail_id}",
+            method="DELETE",
+        )
+
     def users_create(self, diff: ModelDifference):
         """Create any users missing from the target"""
         for user in diff.added_users.values():
@@ -318,6 +326,8 @@ class TargetSuiteCRM(TargetBase):
     def users_sync(self, diff: ModelDifference):
         """Sync the existing users with their values from the source"""
         self.fetch_users()
+        all_source_emails = set()
+        all_target_emails = set()
         for user in diff.changed_users.values():
             _id = self._users_data[user.username]["id"]
             if user.username not in self.config["excluded_usernames"]:
@@ -336,3 +346,34 @@ class TargetSuiteCRM(TargetBase):
                 }
                 logging.info("Updating user '%s'", user.username)
                 self._request("/Api/V8/module", method="PATCH", json=updated_record)
+
+                all_source_emails |= set(diff.source_users[user.username].email)
+                all_target_emails |= set(diff.target_users[user.username].email)
+
+        # Add to suitecrm all E-mail addresses that have been added but don't exist
+        added_emails = all_source_emails - all_target_emails
+        self._add_missing_emails(added_emails)
+
+        # Refresh E-mails so we have the new E-mails' IDs.
+        self._fetch_all_emails(refresh=True)
+
+        # For each updated user, assign that user's added E-mails and unassign removed E-mails.
+        for user in diff.changed_users.values():
+            if user.username not in self.config["excluded_usernames"]:
+                source_emails = set(diff.source_users[user.username].email)
+                target_emails = set(diff.target_users[user.username].email)
+                if source_emails == target_emails:
+                    # Nothing to do
+                    continue
+
+                added_emails = source_emails - target_emails
+                for mail in added_emails:
+                    self._assign_email(mail, user.username)
+
+                removed_emails = target_emails - source_emails
+                # It's possible to have multiple entries in the EmailAddress module
+                # that have the same E-mail address but different ID. Use the list
+                # of E-mails for this user to get the right ID.
+                mails_to_ids = self._fetch_emails_with_id_for_user(user.username)
+                for mail in removed_emails:
+                    self._unassign_email(mails_to_ids[mail], user.username)
