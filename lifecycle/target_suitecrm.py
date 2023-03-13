@@ -22,6 +22,7 @@ class TargetSuiteCRM(TargetBase):
         self._token = None
         self._token_expiry = 0
         self._users_data = {}
+        self._emails_to_id = {}
 
     mandatory_fields = {
         "url",
@@ -123,34 +124,77 @@ class TargetSuiteCRM(TargetBase):
             yield from self._iter_pages(endpoint, page)
         logging.debug("Done iterating")
 
+    def _user_email_endpoint(self, username: str) -> str:
+        """Calculates the endpoint to a user's E-mails"""
+        assert username in self._users_data
+
+        # If the user has *any* E-mails, the EmailAddress relationship is populated
+        data = self._users_data[username]
+        if data["attributes"]["email1"]:
+            return "/Api/" + data["relationships"]["EmailAddress"]["links"]["related"]
+
+        return ""
+
+    def _fetch_raw_emails_for_user(self, username: str) -> dict:
+        """Takes a username and fetches any extra E-mail addresses, returning the raw dict"""
+        endpoint = self._user_email_endpoint(username)
+        if endpoint:
+            emails_dict = list(self._iter_pages(endpoint))
+        else:
+            emails_dict = {}
+
+        return emails_dict
+
+    def _fetch_emails_for_user(self, username: str) -> tuple[str]:
+        """Takes a username and fetches any extra E-mail addresses,
+        returning only the E-mail addresses.
+        """
+
+        emails = tuple(
+            ent["attributes"]["email_address"]
+            for ent in self._fetch_raw_emails_for_user(username)
+        )
+        logging.debug("E-mails fetched for user '%s': '%s'", username, emails)
+
+        return emails
+
+    def _fetch_emails_with_id_for_user(self, username: str) -> dict[str, str]:
+        """Takes a username and fetches any extra E-mail addresses,
+        returning a dict of email address to ID
+        """
+        return {
+            ent["attributes"]["email_address"]: ent["id"]
+            for ent in self._fetch_raw_emails_for_user(username)
+        }
+
     def fetch_users(self, refresh: bool = False) -> Dict[str, User]:
         """Load the SuiteCRM users"""
         if not refresh and self.users:
             return self.users
 
         users = {}
-        users_data = {}
+        self._users_data = {}
 
         _json = list(self._iter_pages("/Api/V8/module/Users"))
 
         for obj in _json:
             attributes = obj["attributes"]
             username = attributes["user_name"]
+            self._users_data[username] = obj
+            emails = self._fetch_emails_for_user(username)
             user = User(
                 username=username,
                 forename=attributes["first_name"],
                 surname=attributes["last_name"],
                 fullname=attributes["full_name"],
-                email=(attributes["email1"],),
                 groups=(),
+                email=emails,
                 locked=attributes["status"].lower() != "active",
             )
             users[username] = user
-            users_data[username] = obj
 
         logging.debug("Users fetched from server: '%s'", users)
         self.users = users
-        self._users_data = users_data
         return users
 
     def users_create(self, diff: ModelDifference):
