@@ -299,7 +299,13 @@ class TargetSuiteCRM(TargetBase):
                 self._assign_email(mail, user.username)
 
     def users_cleanup(self, diff: ModelDifference):
-        """Remove any users missing from the source"""
+        """Remove any users missing from the source
+
+        Note: When it deletes a User it doesn't delete the E-mail addresses
+        associated with that user, as there's no guarantee that E-mail address
+        isn't also used elsewhere.
+        """
+
         self.fetch_users()
         logging.debug("Started cleaning users")
         logging.debug("Excluded usernames: %s", self.config["excluded_usernames"])
