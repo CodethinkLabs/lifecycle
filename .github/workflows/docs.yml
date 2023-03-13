@@ -11,7 +11,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - run: sudo apt install -y python3-sphinx python3-sphinx-rtd-theme
-    - run: make -C docs html
+    - run: make -C docs html SPHINXOPTS="-W --keep-going"
     - uses: actions/upload-artifact@v3
       with:
         name: htmldoc
