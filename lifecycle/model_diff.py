@@ -37,27 +37,49 @@ class InvalidRegex(re.error, ModelDifferenceError):
 class ModelDifferenceConfig:
     r"""An object holding the config used by the ModelDifference class
 
-    Expected config fields are:
-    ```
-        # List of all fields that we check for changes of
-        fields:
-        - username
-        - forename
-        - groups
-        ...
-        # If we check for changes in groups, only check for entries
-        # matching these regular expressions exactly
-        groups_patterns:
-        - '^everyone$'
-        - '^\w\w\d\d\d$'
-    ```
+    This defines the fields that will be considered when comparing two Users
+    to decide whether they meaningfully differ, e.g.
+
+    * We only care if users have changed their names when syncing HR systems
+
+    * we only care about a subset of all groups when adding users to project
+      groups.
+
     """
+
     fields: List[str]
+    """fields: The fields in the User that matter if they differ
+
+    e.g. ``["username", "forename", "groups"]``
+    """
+
     groups_patterns: List[re.Pattern]
+    r"""groups_patterns: a list of regex patterns, a group must match against
+    at least one of these patterns to matter if it differs.
+
+    e.g. ``[re.compile(r'^everyone$'), re.compile(r'^\w\w\d\d\d$')]``
+    """
 
     @staticmethod
     def from_dict(config_dict: Dict):
-        """Parses a dict of possible config values, validates and returns a ModelDifferenceConfig"""
+        r"""Parses a dict of possible config values, validates and returns a
+        ModelDifferenceConfig
+
+        The Dict expects to have an entry called "fields" that is a list of
+        fields, e.g::
+
+            fields:
+            - username
+            - forename
+            - groups
+
+        It may also have an entry called "groups" that is a list of regular
+        expression patterns, e.g.::
+
+            groups_patterns:
+            - '^everyone$'
+            - '^\w\w\d\d\d$'
+        """
 
         config_fields = config_dict["fields"]
         groups_patterns = []
@@ -79,21 +101,22 @@ class ModelDifferenceConfig:
 # pylint: disable-msg=too-few-public-methods
 @dataclasses.dataclass
 class ModelDifference:
-    """A class representing the difference between two dicts of Users
-
-    Attributes:
-        added_users: Dict of users that have been added to the source.
-        removed_users: Dict of users that have been removed from the source.
-        changed_users: Dict of users that have been changed in the source.
-                       These users are merged together from source and target
-                       based on the config provided.
-        unchanged_users: Dict of users that have not been changed in the source.
-    """
+    """A class representing the difference between two dicts of Users"""
 
     added_users: Dict[str, User]
+    """added_users: Dict of users that have been added to the source."""
+
     removed_users: Dict[str, User]
+    """removed_users: Dict of users that have been removed from the source."""
+
     changed_users: Dict[str, User]
+    """changed_users: Dict of users that have been changed in the source.
+    These users are merged together from source and target based on the config
+    provided.
+    """
+
     unchanged_users: Dict[str, User]
+    """unchanged_users: Dict of users that have not been changed in the source."""
 
     @staticmethod
     def _list_groups(
