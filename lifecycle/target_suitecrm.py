@@ -197,6 +197,60 @@ class TargetSuiteCRM(TargetBase):
         self.users = users
         return users
 
+    def _fetch_all_emails(self, refresh=False):
+        if not refresh and self._emails_to_id:
+            return self._emails_to_id
+
+        emails_json = list(self._iter_pages("/Api/V8/module/EmailAddress"))
+        self._emails_to_id = {}
+        for ent in emails_json:
+            address = ent["attributes"]["email_address"]
+            _id = ent["id"]
+            if address in self._emails_to_id:
+                logging.warning(
+                    (
+                        "Duplicate E-mail address entries found in suitecrm server:"
+                        "Address '%s' has IDs '%s' and '%s'. Using the first one only."
+                    ),
+                    address,
+                    self._emails_to_id[address],
+                    _id,
+                )
+            else:
+                self._emails_to_id[address] = _id
+        return self._emails_to_id
+
+    def _add_missing_emails(self, emails):
+        emails_to_id = self._fetch_all_emails(refresh=True)
+        missing_emails = set(emails) - set(emails_to_id.keys())
+        for mail in missing_emails:
+            logging.debug("Creating new E-mail entry for address '%s'", mail)
+            new_mail = {
+                "data": {
+                    "type": "EmailAddress",
+                    "attributes": {
+                        "email_address": mail,
+                    },
+                }
+            }
+            self._request("/Api/V8/module", method="POST", json=new_mail)
+
+    def _assign_email(self, mail, username):
+        logging.debug("Assigning E-mail '%s' to user '%s'", mail, username)
+        # Create relationship, this user to that E-mail address.
+        user_id = self._users_data[username]["id"]
+        new_relationship = {
+            "data": {
+                "type": "EmailAddress",
+                "id": self._emails_to_id[mail],
+            }
+        }
+        self._request(
+            f"/Api/V8/module/Users/{user_id}/relationships",
+            method="POST",
+            json=new_relationship,
+        )
+
     def users_create(self, diff: ModelDifference):
         """Create any users missing from the target"""
         for user in diff.added_users.values():
@@ -216,6 +270,25 @@ class TargetSuiteCRM(TargetBase):
             logging.debug("Creating user: '%s'", user)
             self._request("/Api/V8/module", method="POST", json=new_user)
             logging.debug("User created successfully")
+
+        # Finish now if none of our new users have more than one E-mail address
+        if not any(len(user.email) > 1 for user in diff.added_users.values()):
+            return
+
+        added_emails = set()
+        for user in diff.added_users.values():
+            for mail in user.email[1:]:
+                added_emails.add(mail)
+        self._add_missing_emails(added_emails)
+
+        # Refresh E-mails so we have the new E-mails' IDs.
+        self._fetch_all_emails(refresh=True)
+        # Refresh users so we have the new users' IDs.
+        self.fetch_users(refresh=True)
+        # Link E-mail addresses to our new users
+        for user in diff.added_users.values():
+            for mail in user.email[1:]:
+                self._assign_email(mail, user.username)
 
     def users_cleanup(self, diff: ModelDifference):
         """Remove any users missing from the source"""
