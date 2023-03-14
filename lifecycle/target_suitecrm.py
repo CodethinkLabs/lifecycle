@@ -141,7 +141,7 @@ class TargetSuiteCRM(TargetBase):
                 forename=attributes["first_name"],
                 surname=attributes["last_name"],
                 fullname=attributes["full_name"],
-                email=attributes["email1"],
+                email=(attributes["email1"],),
                 groups=(),
                 locked=attributes["status"].lower() != "active",
             )
