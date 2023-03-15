@@ -132,6 +132,7 @@ class TargetBase(_Base):
                     continue
 
     def calculate_difference(self):
+        """Calculates the difference between the users in the source and the users in the target"""
         source_users = self.source.fetch_users()
         target_users = self.fetch_users()
         diff_config = ModelDifferenceConfig(
