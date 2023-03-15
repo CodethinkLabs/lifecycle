@@ -115,13 +115,8 @@ class TargetBase(_Base):
             logging.warning("No stages set for '%s', skipping", self.__class__.__name__)
             return
 
-        source_users = self.source.fetch_users()
-        target_users = self.fetch_users()
-        diff_config = ModelDifferenceConfig(
-            fields=self.source.supported_user_fields & self.supported_user_fields,
-            groups_patterns=[],
-        )
-        difference = ModelDifference.calculate(source_users, target_users, diff_config)
+        difference = self.calculate_difference()
+        print(difference)
 
         for stage in ("users_create", "users_cleanup", "users_sync"):
             if stage in enabled_stages:
@@ -135,6 +130,16 @@ class TargetBase(_Base):
                         self.__class__.__name__,
                     )
                     continue
+
+    def calculate_difference(self):
+        source_users = self.source.fetch_users()
+        target_users = self.fetch_users()
+        diff_config = ModelDifferenceConfig(
+            fields=self.source.supported_user_fields & self.supported_user_fields,
+            groups_patterns=[],
+        )
+        difference = ModelDifference.calculate(source_users, target_users, diff_config)
+        return difference
 
     def users_create(self, diff: ModelDifference):
         """Create any users missing from the target"""

@@ -73,6 +73,28 @@ def test_basic_fetch(basicTarget, suitecrm_request):
     assert users == expected_users
 
 
+def test_users_create(basicTarget, suitecrm_request):
+    suitecrm_data = [
+        {
+            "type": "User",
+            "id": "c0ffee-cafe",
+            "attributes": {
+                "user_name": "foobar",
+                "first_name": "Foo",
+                "last_name": "Bar",
+                "full_name": "Foo Bar",
+                "email1": "foo.bar@example.org",
+                "status": "Active",
+            },
+        },
+    ]
+    suitecrm_request(suitecrm_data)
+    users = basicTarget.fetch_users()
+    diff = basicTarget.calculate_difference()
+    basicTarget.users_create(diff)
+    assert False
+
+
 @pytest.fixture(name="basicSource")
 def fixture_source():
     """We need a source to set up a proper SuiteCRM target"""
@@ -138,6 +160,7 @@ def fixture_request(mocker):
 def _mock_response(data, exception=None):
     # Used in Response:
     # .text, .json(), .raise_for_status()
+    print(f"Response Data: {data}")
     response = MagicMock()
     response.json.return_value = data
     response.text = json.dumps(data, indent=2)
@@ -209,12 +232,14 @@ def _suitecrm_POST(server_data, endpoint, **kwargs):
                 "access_token": access_token,
             }
         )
-
     if not kwargs["json"]:
         raise MethodException("Can't POST without a json unless authenticating")
 
     if endpoint == "Api/V8/Module":
         new_user = kwargs["json"]
+        a = _mock_response(new_user)
+        print(f"new_user: {a}")
+        return a
 
 
 @pytest.fixture(name="basicTarget")
