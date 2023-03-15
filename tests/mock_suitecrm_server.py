@@ -120,9 +120,16 @@ class MockSuiteCRMServer:
                 )
             assert len(found_entries) == 1
             assert found_entries[0]["type"] == entry_type
-            # we didn't copy any dicts when searching, so can just amend the one returned by searching
-            found_entries[0]["attributes"].update(entry_attributes)
-            return self.mock_response()
+
+            if int(entry_attributes.get("deleted", "0")):
+                # We actually want to delete this user
+                self.data.remove(found_entries[0])
+                return self.mock_response()
+            else:
+                # User not deleted, do an ordinary update
+                # we didn't copy any dicts when searching, so can just amend the one returned by searching
+                found_entries[0]["attributes"].update(entry_attributes)
+                return self.mock_response()
 
         raise MethodException(f"Unhandled endpoint '{endpoint}'")
 
