@@ -8,7 +8,8 @@ from lifecycle.model_diff import ModelDifference
 from lifecycle.models import Group, User
 from lifecycle.source_staticconfig import SourceStaticConfig
 from lifecycle.target_suitecrm import TargetSuiteCRM
-from tests.mock_suitecrm_server import MethodException, MockSuiteCRMServer
+
+from .mock_suitecrm_server import MethodException, MockSuiteCRMServer
 
 
 @pytest.fixture(name="basicConfig")
