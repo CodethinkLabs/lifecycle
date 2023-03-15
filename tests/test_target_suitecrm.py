@@ -4,15 +4,11 @@ This checks the logic of config settings and mocks an SuiteCRM server connection
 """
 import pytest
 
-from lifecycle import LifecycleException, SourceBase
+from lifecycle.model_diff import ModelDifference
 from lifecycle.models import Group, User
 from lifecycle.source_staticconfig import SourceStaticConfig
 from lifecycle.target_suitecrm import TargetSuiteCRM
-from tests.mock_suitecrm_server import MockSuiteCRMServer
-
-
-class MethodException(LifecycleException):
-    """Called when a method is called incorrectly or isn't valid"""
+from tests.mock_suitecrm_server import MethodException, MockSuiteCRMServer
 
 
 @pytest.fixture(name="basicConfig")
@@ -68,10 +64,48 @@ def test_basic_fetch(basicTarget, suitecrm_server):
 
 
 def test_users_create(basicTarget, suitecrm_server):
-    suitecrm_server()
+    server = suitecrm_server()
     users = basicTarget.fetch_users()
     diff = basicTarget.calculate_difference()
+    old_users = server.search_by_type("User")
     basicTarget.users_create(diff)
+    new_users = server.search_by_type("User")
+    assert len(new_users) > len(old_users)
+
+
+def test_users_update(basicConfig, suitecrm_server):
+    suitecrm_data = [
+        {
+            "type": "User",
+            "id": "c0ffee-cafe",
+            "attributes": {
+                "user_name": "basicuser",
+                "first_name": "Basic",
+                "last_name": "Bob",
+                "full_name": "Basic Bob",
+                "email1": "basic.bob@example.org",
+                "status": "Active",
+            },
+        },
+    ]
+    server = suitecrm_server(suitecrm_data)
+    target = TargetSuiteCRM(basicConfig, None)
+    diff = ModelDifference(
+        added_users={},
+        removed_users={},
+        unchanged_users={},
+        changed_users={
+            "basicuser": User(
+                "basicuser",
+                forename="Deluxe",
+                surname="Bob",
+                email=("basic.bob@example.org",),
+            )
+        },
+    )
+    target.users_sync(diff)
+    users = server.search_by_type("User")
+    assert users[0]["attributes"]["first_name"] == "Deluxe"
 
 
 @pytest.fixture(name="basicSource")
@@ -132,6 +166,7 @@ def fixture_suitecrm_server(mocker):
                 raise MethodException("Invalid method used")
 
         mocker.patch("requests.request", side_effect=_suitecrm_request)
+        return server
 
     return _request_server
 
