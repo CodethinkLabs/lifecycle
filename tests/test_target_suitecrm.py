@@ -5,14 +5,14 @@ This checks the logic of config settings and mocks an SuiteCRM server connection
 import pytest
 
 from lifecycle.model_diff import ModelDifference
-from lifecycle.models import Group, User
+from lifecycle.models import User
 from lifecycle.source_staticconfig import SourceStaticConfig
 from lifecycle.target_suitecrm import TargetSuiteCRM
 
 from .mock_suitecrm_server import MethodException, MockSuiteCRMServer
 
 
-@pytest.fixture(name="basicConfig")
+@pytest.fixture(name="basic_config")
 def fixture_config():
     """Create a config"""
     config = {
@@ -25,30 +25,14 @@ def fixture_config():
     return config
 
 
-"""Make sure that a target can be created from a basic config"""
-
-
-def test_basic_config_creation(basicConfig):
-    target = TargetSuiteCRM(basicConfig, None)
+def test_basic_config_creation(basic_config):
+    """Make sure that a target can be created from a basic config"""
+    target = TargetSuiteCRM(basic_config, None)
     assert target
 
 
-def test_basic_fetch(basicTarget, suitecrm_server):
+def test_basic_fetch(basic_target, suitecrm_server):
     """Get all users, shows some very basic users"""
-    suitecrm_data = [
-        {
-            "type": "User",
-            "id": "c0ffee-cafe",
-            "attributes": {
-                "user_name": "foobar",
-                "first_name": "Foo",
-                "last_name": "Bar",
-                "full_name": "Foo Bar",
-                "email1": "foo.bar@example.org",
-                "status": "Active",
-            },
-        },
-    ]
     expected_users = {
         "foobar": User(
             "foobar",
@@ -59,22 +43,25 @@ def test_basic_fetch(basicTarget, suitecrm_server):
             locked=False,
         )
     }
-    suitecrm_server(suitecrm_data)
-    users = basicTarget.fetch_users()
+    suitecrm_server()
+    users = basic_target.fetch_users()
     assert users == expected_users
 
 
-def test_users_create(basicTarget, suitecrm_server):
+def test_users_create(basic_target, suitecrm_server):
+    """Create some users"""
     server = suitecrm_server()
-    users = basicTarget.fetch_users()
-    diff = basicTarget.calculate_difference()
+    diff = basic_target.calculate_difference()
     old_users = server.search_by_type("User")
-    basicTarget.users_create(diff)
+    basic_target.users_create(diff)
     new_users = server.search_by_type("User")
     assert len(new_users) > len(old_users)
 
 
-def test_users_update(basicConfig, suitecrm_server):
+def test_users_update(basic_config, suitecrm_server):
+    """Update the attributes of an existing user and check the changes have
+    been made
+    """
     suitecrm_data = [
         {
             "type": "User",
@@ -90,7 +77,7 @@ def test_users_update(basicConfig, suitecrm_server):
         },
     ]
     server = suitecrm_server(suitecrm_data)
-    target = TargetSuiteCRM(basicConfig, None)
+    target = TargetSuiteCRM(basic_config, None)
     diff = ModelDifference(
         added_users={},
         removed_users={},
@@ -109,7 +96,8 @@ def test_users_update(basicConfig, suitecrm_server):
     assert users[0]["attributes"]["first_name"] == "Deluxe"
 
 
-def test_users_delete(basicConfig, suitecrm_server):
+def test_users_delete(basic_config, suitecrm_server):
+    """Delete a user and check it's been deleted"""
     suitecrm_data = [
         {
             "type": "User",
@@ -125,7 +113,7 @@ def test_users_delete(basicConfig, suitecrm_server):
         },
     ]
     server = suitecrm_server(suitecrm_data)
-    target = TargetSuiteCRM(basicConfig, None)
+    target = TargetSuiteCRM(basic_config, None)
     diff = ModelDifference(
         added_users={},
         changed_users={},
@@ -144,7 +132,7 @@ def test_users_delete(basicConfig, suitecrm_server):
     assert len(users) == 0
 
 
-@pytest.fixture(name="basicSource")
+@pytest.fixture(name="basic_source")
 def fixture_source():
     """We need a source to set up a proper SuiteCRM target"""
     source = SourceStaticConfig(
@@ -172,6 +160,8 @@ def fixture_source():
 
 @pytest.fixture(name="suitecrm_server")
 def fixture_suitecrm_server(mocker):
+    """Patches requests.request so that it gets routed through a MockSuiteCRMServer"""
+
     def _request_server(server_data: dict = None):
         server = MockSuiteCRMServer(server_data)
 
@@ -190,16 +180,14 @@ def fixture_suitecrm_server(mocker):
             #        "Unexpected redirect. (Redirecting is true by default)"
             #    )
 
-            if method == "DELETE":
-                raise MethodException("Unexpected use of method DELETE")
-            elif method == "GET":
+            if method == "GET":
                 return server.mock_get(endpoint, **kwargs)
-            elif method == "PATCH":
+            if method == "PATCH":
                 return server.mock_patch(endpoint, **kwargs)
-            elif method == "POST":
+            if method == "POST":
                 return server.mock_post(endpoint, **kwargs)
-            else:
-                raise MethodException("Invalid method used")
+
+            raise MethodException(f"Invalid method used '{method}'")
 
         mocker.patch("requests.request", side_effect=_suitecrm_request)
         return server
@@ -207,7 +195,8 @@ def fixture_suitecrm_server(mocker):
     return _request_server
 
 
-@pytest.fixture(name="basicTarget")
-def test_config_source_creation(basicConfig, basicSource):
-    target = TargetSuiteCRM(basicConfig, basicSource)
+@pytest.fixture(name="basic_target")
+def fixture_basic_target(basic_config, basic_source):
+    """Create a TargetSuiteCRM with default config"""
+    target = TargetSuiteCRM(basic_config, basic_source)
     return target
