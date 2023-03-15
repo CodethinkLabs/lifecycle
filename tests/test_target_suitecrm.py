@@ -108,6 +108,41 @@ def test_users_update(basicConfig, suitecrm_server):
     assert users[0]["attributes"]["first_name"] == "Deluxe"
 
 
+def test_users_delete(basicConfig, suitecrm_server):
+    suitecrm_data = [
+        {
+            "type": "User",
+            "id": "c0ffee-cafe",
+            "attributes": {
+                "user_name": "basicuser",
+                "first_name": "Basic",
+                "last_name": "Bob",
+                "full_name": "Basic Bob",
+                "email1": "basic.bob@example.org",
+                "status": "Active",
+            },
+        },
+    ]
+    server = suitecrm_server(suitecrm_data)
+    target = TargetSuiteCRM(basicConfig, None)
+    diff = ModelDifference(
+        added_users={},
+        changed_users={},
+        unchanged_users={},
+        removed_users={
+            "basicuser": User(
+                "basicuser",
+                forename="Basic",
+                surname="Bob",
+                email=("basic.bob@example.org",),
+            )
+        },
+    )
+    target.users_cleanup(diff)
+    users = server.search_by_type("User")
+    assert len(users) == 0
+
+
 @pytest.fixture(name="basicSource")
 def fixture_source():
     """We need a source to set up a proper SuiteCRM target"""

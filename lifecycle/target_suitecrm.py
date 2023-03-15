@@ -175,6 +175,7 @@ class TargetSuiteCRM(TargetBase):
 
     def users_cleanup(self, diff: ModelDifference):
         """Remove any users missing from the source"""
+        self.fetch_users()
         logging.debug("Started cleaning users")
         logging.debug("Excluded usernames: %s", self.config["excluded_usernames"])
         for user in diff.removed_users.values():
