@@ -6,6 +6,12 @@ from unittest.mock import MagicMock
 import jwt
 import requests
 
+from lifecycle import LifecycleException
+
+
+class MethodException(LifecycleException):
+    """Called when a method is called incorrectly or isn't valid"""
+
 
 class MockSuiteCRMServer:
     def __init__(self, data: list[dict] = None):
@@ -48,6 +54,9 @@ class MockSuiteCRMServer:
 
     def search_by_type(self, entry_type):
         return list([entry for entry in self.data if entry["type"] == entry_type])
+
+    def search_by_ids(self, ids: list[str]):
+        return list([entry for entry in self.data if entry["id"] in ids])
 
     @staticmethod
     def module_response_data(module_data, **kwargs):
@@ -98,7 +107,24 @@ class MockSuiteCRMServer:
         if not kwargs["json"]:
             raise MethodException("PATCH requires a json")
 
-        raise MehodException(f"Unhandled endpoint {endpoint}")
+        if endpoint == "/Api/V8/module":
+            entry_id = kwargs["json"]["data"]["id"]
+            entry_type = kwargs["json"]["data"]["type"]
+            entry_attributes = kwargs["json"]["data"]["attributes"]
+            found_entries = self.search_by_ids([entry_id])
+            if not found_entries:
+                return self.mock_response(
+                    exception=requests.HTTPError(
+                        "can't patch an entry that doesn't exist, 404 probably"
+                    )
+                )
+            assert len(found_entries) == 1
+            assert found_entries[0]["type"] == entry_type
+            # we didn't copy any dicts when searching, so can just amend the one returned by searching
+            found_entries[0]["attributes"].update(entry_attributes)
+            return self.mock_response()
+
+        raise MethodException(f"Unhandled endpoint '{endpoint}'")
 
     def mock_post(self, endpoint, **kwargs):
         if endpoint == "/Api/access_token":

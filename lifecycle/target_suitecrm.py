@@ -199,6 +199,7 @@ class TargetSuiteCRM(TargetBase):
 
     def users_sync(self, diff: ModelDifference):
         """Sync the existing users with their values from the source"""
+        self.fetch_users()
         for user in diff.changed_users.values():
             _id = self._users_data[user.username]["id"]
             if user.username not in self.config["excluded_usernames"]:
