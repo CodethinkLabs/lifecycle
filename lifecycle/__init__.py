@@ -116,7 +116,6 @@ class TargetBase(_Base):
             return
 
         difference = self.calculate_difference()
-        print(difference)
 
         for stage in ("users_create", "users_cleanup", "users_sync"):
             if stage in enabled_stages:
