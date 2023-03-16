@@ -31,6 +31,86 @@ def test_basic_config_creation(basic_config):
     assert target
 
 
+def test_fetch_multi_email(basic_target, suitecrm_server):
+    """Get a user with multiple E-mail addresses"""
+
+    server = suitecrm_server([])
+    user_id = server.create_user(
+        {
+            "user_name": "foobar",
+            "first_name": "Foo",
+            "last_name": "Bar",
+            "full_name": "Foo Bar",
+            "status": "Active",
+        }
+    )
+    server.assign_emails(user_id, ["foo.bar@example.org", "foo.bar@example.com"])
+    users = basic_target.fetch_users()
+    assert list(users.values())[0].email == (
+        "foo.bar@example.org",
+        "foo.bar@example.com",
+    )
+
+
+def test_create_multi_email(basic_target, suitecrm_server):
+    """Create a user with multiple E-mail addresses"""
+    emails = ("foo.bar@example.org", "foo.bar@example.com")
+    user = User(
+        "foobar",
+        forename="Foo",
+        surname="Bar",
+        fullname="Foo Bar",
+        email=emails,
+    )
+    server = suitecrm_server([])
+
+    diff = ModelDifference(
+        source_users={"foobar": user},
+        target_users={},
+        added_users={"foobar": user},
+        removed_users={},
+        unchanged_users={},
+        changed_users={},
+    )
+    basic_target.users_create(diff)
+    found_emails = server.search_by_type("EmailAddress")
+    assert len(found_emails) == 2
+    for email_entry in found_emails:
+        assert email_entry["attributes"]["email_address"] in emails
+
+
+def test_sync_multi_email(basic_target, suitecrm_server):
+    """Update a user's E-mail addresses with multiple, completely different ones"""
+    before_emails = ("foo.bar@example.org",)
+    after_emails = ("foo.bar@example.com", "foo.bar@example.biz")
+    before_user = User(
+        "foobar",
+        forename="Foo",
+        surname="Bar",
+        email=before_emails,
+    )
+    after_user = User(
+        "foobar",
+        forename="Foo",
+        surname="Bar",
+        email=after_emails,
+    )
+    diff = ModelDifference(
+        source_users={"foobar": after_user},
+        target_users={"foobar": before_user},
+        added_users={},
+        removed_users={},
+        unchanged_users={},
+        changed_users={"foobar": before_user},
+    )
+    # Note: default user in the server matches before_user
+    server = suitecrm_server()
+    basic_target.users_sync(diff)
+    user_id = server.get_entry_by_attribute("user_name", "foobar")["id"]
+    for entry in server.get_related_entries_for_module(user_id, "email_addresses"):
+        assert entry["attributes"]["email_address"] in after_emails
+
+
 def test_basic_fetch(basic_target, suitecrm_server):
     """Get all users, shows some very basic users"""
     expected_users = {
@@ -62,23 +142,35 @@ def test_users_update(basic_config, suitecrm_server):
     """Update the attributes of an existing user and check the changes have
     been made
     """
-    suitecrm_data = [
+    server = suitecrm_server([])
+    server.create_user(
         {
-            "type": "User",
-            "id": "c0ffee-cafe",
-            "attributes": {
-                "user_name": "basicuser",
-                "first_name": "Basic",
-                "last_name": "Bob",
-                "full_name": "Basic Bob",
-                "email1": "basic.bob@example.org",
-                "status": "Active",
-            },
-        },
-    ]
-    server = suitecrm_server(suitecrm_data)
+            "user_name": "basicuser",
+            "first_name": "Basic",
+            "last_name": "Bob",
+            "full_name": "Basic Bob",
+            "email1": "basic.bob@example.org",
+            "status": "Active",
+        }
+    )
     target = TargetSuiteCRM(basic_config, None)
     diff = ModelDifference(
+        source_users={
+            "basicuser": User(
+                "basicuser",
+                forename="Basic",
+                surname="Bob",
+                email=("basic.bob@example.org",),
+            ),
+        },
+        target_users={
+            "basicuser": User(
+                "basicuser",
+                forename="Deluxe",
+                surname="Bob",
+                email=("basic.bob@example.org",),
+            ),
+        },
         added_users={},
         removed_users={},
         unchanged_users={},
@@ -98,34 +190,28 @@ def test_users_update(basic_config, suitecrm_server):
 
 def test_users_delete(basic_config, suitecrm_server):
     """Delete a user and check it's been deleted"""
-    suitecrm_data = [
+    server = suitecrm_server([])
+    server.create_user(
         {
-            "type": "User",
-            "id": "c0ffee-cafe",
-            "attributes": {
-                "user_name": "basicuser",
-                "first_name": "Basic",
-                "last_name": "Bob",
-                "full_name": "Basic Bob",
-                "email1": "basic.bob@example.org",
-                "status": "Active",
-            },
-        },
-    ]
-    server = suitecrm_server(suitecrm_data)
+            "user_name": "basicuser",
+            "first_name": "Basic",
+            "last_name": "Bob",
+            "full_name": "Basic Bob",
+            "email1": "basic.bob@example.org",
+            "status": "Active",
+        }
+    )
     target = TargetSuiteCRM(basic_config, None)
+    user = User(
+        "basicuser", forename="Basic", surname="Bob", email=("basic.bob@example.org",)
+    )
     diff = ModelDifference(
+        source_users={"basicuser": user},
+        target_users={},
         added_users={},
         changed_users={},
         unchanged_users={},
-        removed_users={
-            "basicuser": User(
-                "basicuser",
-                forename="Basic",
-                surname="Bob",
-                email=("basic.bob@example.org",),
-            )
-        },
+        removed_users={"basicuser": user},
     )
     target.users_cleanup(diff)
     users = server.search_by_type("User")
@@ -186,6 +272,8 @@ def fixture_suitecrm_server(mocker):
                 return server.mock_patch(endpoint, **kwargs)
             if method == "POST":
                 return server.mock_post(endpoint, **kwargs)
+            if method == "DELETE":
+                return server.mock_delete(endpoint, **kwargs)
 
             raise MethodException(f"Invalid method used '{method}'")
 
