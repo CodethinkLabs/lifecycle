@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 import logging
+import re
 from typing import Dict, Optional
 
 from .model_diff import ModelDifference, ModelDifferenceConfig
@@ -95,6 +96,16 @@ class _Base(ABC):
     def fetch_users(self, refresh: bool = False) -> Dict[str, User]:
         """Load users from services and map to the User model"""
 
+    # pylint: disable-msg=no-self-use
+    def process_groups_patterns(self, groups_patterns: list[str]) -> list[str]:
+        """Allow sources and targets to modify the list of configured group patterns
+
+        This is most commonly used to add group patterns that are configured
+        specifically for that module
+        """
+
+        return groups_patterns
+
 
 class SourceBase(_Base):
     """Abstract base class for sources"""
@@ -108,14 +119,25 @@ class TargetBase(_Base):
 
         self.source = source
 
-    def process_stages(self):
+    def compile_groups_patterns(self, pattern_text: list[str]) -> list[re.Pattern]:
+        """Takes a list of patterns (usually from config), applies any
+        source or target-specific changes, then generates regex patterns
+        """
+
+        pattern_text = self.source.process_groups_patterns(pattern_text)
+        pattern_text = self.process_groups_patterns(pattern_text)
+        return list(re.compile(pat) for pat in pattern_text)
+
+    def process_stages(self, groups_patterns: list[str]):
         """Determine the differences in user models and execute configured stages"""
         enabled_stages = self.config["stages"]
         if not enabled_stages:
             logging.warning("No stages set for '%s', skipping", self.__class__.__name__)
             return
 
-        difference = self.calculate_difference()
+        difference = self.calculate_difference(
+            self.compile_groups_patterns(groups_patterns)
+        )
 
         for stage in ("users_create", "users_cleanup", "users_sync"):
             if stage in enabled_stages:
@@ -130,13 +152,14 @@ class TargetBase(_Base):
                     )
                     continue
 
-    def calculate_difference(self):
+    def calculate_difference(self, groups_patterns: list[re.Pattern]):
         """Calculates the difference between the users in the source and the users in the target"""
+        self.source.fetch()
         source_users = self.source.fetch_users()
         target_users = self.fetch_users()
         diff_config = ModelDifferenceConfig(
             fields=self.source.supported_user_fields & self.supported_user_fields,
-            groups_patterns=[],
+            groups_patterns=groups_patterns,
         )
         difference = ModelDifference.calculate(source_users, target_users, diff_config)
         return difference

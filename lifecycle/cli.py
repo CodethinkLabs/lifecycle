@@ -53,6 +53,8 @@ def main():
             config.print()
         sys.exit(0)
 
+    groups_patterns = config.config.get("groups_patterns", [])
+
     if "source" in config.config:
         if not isinstance(config.config.source.module, str):
             logging.error("Given source module name isn't a string")
@@ -91,7 +93,7 @@ def main():
             Target = getattr(target_mod, f"Target{target.module}")
             del target.module
             current_target = Target(target, current_source)
-            current_target.process_stages()
+            current_target.process_stages(groups_patterns)
 
 
 if __name__ == "__main__":
