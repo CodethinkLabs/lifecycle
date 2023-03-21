@@ -1,16 +1,14 @@
 name: Generate Documentation
 
-on:
-  push:
-    branches:
-      - main
+on: push
 
 jobs:
   htmldoc:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - run: sudo apt install -y python3-sphinx python3-sphinx-rtd-theme
+    - run: sudo apt install -y python3-sphinx python3-sphinx-rtd-theme python3-ldap3
+    - run: sudo pip install addict
     - run: make -C docs html SPHINXOPTS="-W --keep-going"
     - uses: actions/upload-artifact@v3
       with:
