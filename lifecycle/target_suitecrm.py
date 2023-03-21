@@ -10,7 +10,7 @@ import requests
 
 from . import TargetBase
 from .model_diff import ModelDifference
-from .models import User
+from .models import Group, User
 
 
 class TargetSuiteCRM(TargetBase):
@@ -177,6 +177,20 @@ class TargetSuiteCRM(TargetBase):
             for ent in self._fetch_raw_emails_for_user(username)
         }
 
+    def _fetch_groups_for_user(self, username: str) -> tuple[Group]:
+        """Generates a tuple of all the Groups associated with a user,
+        generated from the SecurityGroups in SuiteCRM
+        """
+
+        groups = tuple(
+            Group(
+                ent["attributes"]["name"],
+                description=ent["attributes"]["description"],
+            )
+            for ent in self._fetch_raw_relations_for_user(username, "SecurityGroups")
+        )
+        return groups
+
     def fetch_users(self, refresh: bool = False) -> Dict[str, User]:
         """Load the SuiteCRM users"""
         if not refresh and self.users:
@@ -192,12 +206,13 @@ class TargetSuiteCRM(TargetBase):
             username = attributes["user_name"]
             self._users_data[username] = obj
             emails = self._fetch_emails_for_user(username)
+            groups = self._fetch_groups_for_user(username)
             user = User(
                 username=username,
                 forename=attributes["first_name"],
                 surname=attributes["last_name"],
                 fullname=attributes["full_name"],
-                groups=(),
+                groups=groups,
                 email=emails,
                 locked=attributes["status"].lower() != "active",
             )
