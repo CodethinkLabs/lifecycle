@@ -118,10 +118,13 @@ class TargetSuiteCRM(TargetBase):
         _json = self._request(endpoint, params=params).json()
         yield from _json["data"]
 
-        total_pages = _json["meta"]["total-pages"]
-        while page != total_pages:
-            page += 1
-            yield from self._iter_pages(endpoint, page)
+        if "total-pages" in _json["meta"]:
+            # if you request something that's empty, you get nothing
+            # but it's hard to guess ahead-of-time whether it'll be empty
+            total_pages = _json["meta"]["total-pages"]
+            while page != total_pages:
+                page += 1
+                yield from self._iter_pages(endpoint, page)
         logging.debug("Done iterating")
 
     def _user_email_endpoint(self, username: str) -> str:
