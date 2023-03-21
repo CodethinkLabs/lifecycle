@@ -101,21 +101,14 @@ class ModelDifferenceConfig:
 # pylint: disable-msg=too-few-public-methods
 @dataclasses.dataclass
 class ModelDifference:
-    """A class representing the difference between two dicts of Users
-
-    Attributes:
-        source_users: Dict of users as they exist in the source.
-        target_users: Dict of users as they exist in the target.
-        added_users: Dict of users that have been added to the source.
-        removed_users: Dict of users that have been removed from the source.
-        changed_users: Dict of users that have been changed in the source.
-                       These users are merged together from source and target
-                       based on the config provided.
-        unchanged_users: Dict of users that have not been changed in the source.
-    """
+    """A class representing the difference between two dicts of Users"""
 
     source_users: Dict[str, User]
+    """source_users: Dict of users as they exist in the source"""
+
     target_users: Dict[str, User]
+    """target_users: Doct of users as they exist in the target"""
+
     added_users: Dict[str, User]
     """added_users: Dict of users that have been added to the source."""
 
