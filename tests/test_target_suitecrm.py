@@ -5,7 +5,7 @@ This checks the logic of config settings and mocks an SuiteCRM server connection
 import pytest
 
 from lifecycle.model_diff import ModelDifference
-from lifecycle.models import User
+from lifecycle.models import Group, User
 from lifecycle.source_staticconfig import SourceStaticConfig
 from lifecycle.target_suitecrm import TargetSuiteCRM
 
@@ -126,6 +126,31 @@ def test_basic_fetch(basic_target, suitecrm_server):
     suitecrm_server()
     users = basic_target.fetch_users()
     assert users == expected_users
+
+
+def test_groups_fetch(basic_target, suitecrm_server):
+    """Check security groups on the server are fetched to the user"""
+    server = suitecrm_server()
+    assert (
+        server.data[0]["type"] == "User"
+    ), "First entry in the server is not a User, this test needs updating"
+    user_id = server.data[0]["id"]  # Assumes server has only one user
+    group_id = server.create_record(
+        {
+            "data": {
+                "type": "SecurityGroup",
+                "attributes": {
+                    "name": "TestGroup",
+                    "description": "Testy Test Group",
+                },
+            }
+        }
+    )
+    server.create_relationship("User", user_id, "SecurityGroup", group_id)
+    fetched_users = basic_target.fetch_users()
+    assert fetched_users["foobar"].groups == (
+        Group("TestGroup", description="Testy Test Group"),
+    )
 
 
 def test_users_create(basic_target, suitecrm_server):
