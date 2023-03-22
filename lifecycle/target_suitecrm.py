@@ -122,7 +122,7 @@ class TargetSuiteCRM(TargetBase):
             # if you request something that's empty, you get nothing
             # but it's hard to guess ahead-of-time whether it'll be empty
             total_pages = _json["meta"]["total-pages"]
-            while page != total_pages:
+            while page < total_pages:
                 page += 1
                 yield from self._iter_pages(endpoint, page)
         logging.debug("Done iterating")
