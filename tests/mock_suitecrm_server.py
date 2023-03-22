@@ -311,6 +311,27 @@ class MockSuiteCRMServer:
 
         raise MethodException(f"Unhandled endpoint {endpoint}")
 
+    def patch_entry(self, entry_id: str, entry_type: str, new_attributes: dict):
+        """Replaces the attributes of an entry with the given attributes
+
+        In addition, this deletes the entry if 'deleted' gets set to 1
+        """
+        entry = self.search_by_id(entry_id)
+        if not entry:
+            return self.mock_response(
+                exception=requests.HTTPError(
+                    "can't patch an entry that doesn't exist, 404 probably"
+                )
+            )
+        assert entry["type"] == entry_type
+        if int(new_attributes.get("deleted", "0")):
+            # We actually want to delete this entry
+            self.data.remove(entry)
+        else:
+            entry["attributes"].update(new_attributes)
+
+        return self.mock_response()
+
     def mock_patch(self, endpoint, **kwargs):
         """Simulates a PATCH request to the SuiteCRM server"""
 
@@ -323,27 +344,27 @@ class MockSuiteCRMServer:
             entry_id = kwargs["json"]["data"]["id"]
             entry_type = kwargs["json"]["data"]["type"]
             entry_attributes = kwargs["json"]["data"]["attributes"]
-            entry = self.search_by_id(entry_id)
-            if not entry:
-                return self.mock_response(
-                    exception=requests.HTTPError(
-                        "can't patch an entry that doesn't exist, 404 probably"
-                    )
-                )
-            assert entry["type"] == entry_type
-
-            if int(entry_attributes.get("deleted", "0")):
-                # We actually want to delete this user
-                self.data.remove(entry)
-                return self.mock_response()
-
-            # User not deleted, do an ordinary update
-            # We didn't copy any dicts when searching, so can just amend the
-            # one returned by searching
-            entry["attributes"].update(entry_attributes)
+            self.patch_entry(entry_id, entry_type, entry_attributes)
             return self.mock_response()
 
         raise MethodException(f"Unhandled endpoint '{endpoint}'")
+
+    def create_relationship(
+        self, entry_type: str, entry_id: str, related_type: str, related_id: str
+    ) -> MagicMock:
+        """Creates a relationship between two entries, returning a mock response"""
+        entry_type = self.map_module(entry_type)
+        entry = self.search_by_id(entry_id)
+        if not entry:
+            return self.mock_response(
+                exception=requests.HTTPError(
+                    f"404 probably, no module with ID {entry_id}"
+                )
+            )
+        assert entry_type == entry["type"]
+        relationship_name = self.map_relationship(entry_type, related_type)
+        entry["_relationships"][relationship_name].append(related_id)
+        return self.mock_response()
 
     def mock_post(self, endpoint, **kwargs):
         """Simulates a POST request to the SuiteCRM server"""
@@ -379,21 +400,12 @@ class MockSuiteCRMServer:
             # /Api/V8/module/<modulename>/<module_id>/relationships, aka create relationship
             module_name = query[3]
             module_id = query[4]
-
-            module = self.search_by_id(module_id)
-            if not module:
-                return self.mock_response(
-                    exception=requests.HTTPError(
-                        f"404 probably, no module with ID {module_id}"
-                    )
-                )
-
-            relationship_name = self.map_relationship(
-                module_name, kwargs["json"]["data"]["type"]
+            return self.create_relationship(
+                module_name,
+                module_id,
+                kwargs["json"]["data"]["type"],
+                kwargs["json"]["data"]["id"],
             )
-            related_id = kwargs["json"]["data"]["id"]
-            module["_relationships"][relationship_name].append(related_id)
-            return self.mock_response()
 
         if endpoint == "/Api/V8/module":
             new_user = kwargs["json"]
@@ -401,6 +413,24 @@ class MockSuiteCRMServer:
             return self.mock_response()
 
         raise MethodException(f"Unhandled endpoint {endpoint}")
+
+    def delete_relationship(
+        self, entry_type: str, entry_id: str, relationship_name: str, related_id: str
+    ) -> MagicMock:
+        """Deletes a relationship between two entries"""
+
+        entry_type = self.map_module(entry_type)
+        entry = self.search_by_id(entry_id)
+        if not entry:
+            return self.mock_response(
+                exception=requests.HTTPError(
+                    f"404 probably, no module with ID {entry_id}"
+                )
+            )
+        assert entry["type"] == entry_type
+        entry["_relationships"][relationship_name].remove(related_id)
+
+        return self.mock_response()
 
     # pylint: disable-msg=unused-argument
     def mock_delete(self, endpoint, **kwargs):
@@ -417,22 +447,12 @@ class MockSuiteCRMServer:
             and query[5] == "relationships"
         ):
             # /Api/V8/module/<modulename>/<module_id>/relationships/<relationship>/<related_id>
-            # A.K.A. delete relationship
-            module_name = self.map_module(query[3])
+            module_name = query[3]
             module_id = query[4]
             relationship_name = query[6]
             related_id = query[7]
-
-            module = self.search_by_id(module_id)
-            if not module:
-                return self.mock_response(
-                    exception=requests.HTTPError(
-                        f"404 probably, no module with ID {module_id}"
-                    )
-                )
-            assert module["type"] == module_name
-            module["_relationships"][relationship_name].remove(related_id)
-
-            return self.mock_response()
+            return self.delete_relationship(
+                module_name, module_id, relationship_name, related_id
+            )
 
         raise MethodException(f"Unhandled endpoint {endpoint}")
