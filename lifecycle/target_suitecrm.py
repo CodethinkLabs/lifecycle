@@ -127,26 +127,33 @@ class TargetSuiteCRM(TargetBase):
                 yield from self._iter_pages(endpoint, page)
         logging.debug("Done iterating")
 
-    def _user_email_endpoint(self, username: str) -> str:
-        """Calculates the endpoint to a user's E-mails"""
-        assert username in self._users_data
+    def _user_relationship_endpoint(self, username: str, relationship_type: str) -> str:
+        """Returns the API endpoint for the relationship of a given type to a given user"""
 
-        # If the user has *any* E-mails, the EmailAddress relationship is populated
+        assert username in self._users_data
         data = self._users_data[username]
-        if data["attributes"]["email1"]:
-            return "/Api/" + data["relationships"]["EmailAddress"]["links"]["related"]
+        if relationship_type in data["relationships"]:
+            return (
+                "/Api/" + data["relationships"][relationship_type]["links"]["related"]
+            )
 
         return ""
 
+    def _fetch_raw_relations_for_user(
+        self, username: str, relationship_type: str
+    ) -> dict:
+        """Returns the raw entries of a given type related to a given user"""
+
+        endpoint = self._user_relationship_endpoint(username, relationship_type)
+        if endpoint:
+            return list(self._iter_pages(endpoint))
+
+        return {}
+
     def _fetch_raw_emails_for_user(self, username: str) -> dict:
         """Takes a username and fetches any extra E-mail addresses, returning the raw dict"""
-        endpoint = self._user_email_endpoint(username)
-        if endpoint:
-            emails_dict = list(self._iter_pages(endpoint))
-        else:
-            emails_dict = {}
 
-        return emails_dict
+        return self._fetch_raw_relations_for_user(username, "EmailAddress")
 
     def _fetch_emails_for_user(self, username: str) -> tuple[str]:
         """Takes a username and fetches any extra E-mail addresses,
