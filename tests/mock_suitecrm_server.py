@@ -88,9 +88,14 @@ class MockSuiteCRMServer:
                     "links": {
                         "related": f"V8/module/Users/{user_id}/relationships/email_addresses",
                     }
-                }
+                },
+                "SecurityGroups": {
+                    "links": {
+                        "related": f"V8/module/Users/{user_id}/relationships/SecurityGroups",
+                    }
+                },
             },
-            "_relationships": {"email_addresses": []},
+            "_relationships": {"email_addresses": [], "SecurityGroups": []},
         }
 
         self.data.append(user_entry)
@@ -102,11 +107,11 @@ class MockSuiteCRMServer:
     def assign_emails(self, user_id: str, emails: list[str]):
         """Assign the listed E-mail addresses to the user with the specified ID"""
 
-        user_entries = self.search_by_ids([user_id])
-        assert len(user_entries) == 1
+        user_entry = self.search_by_id(user_id)
+        assert user_entry
 
-        if emails and not user_entries[0]["attributes"]["email1"]:
-            user_entries[0]["attributes"]["email1"] = emails[0]
+        if emails and not user_entry["attributes"]["email1"]:
+            user_entry["attributes"]["email1"] = emails[0]
         for email in emails:
             if not email:
                 # it could be an empty string
@@ -121,7 +126,7 @@ class MockSuiteCRMServer:
                     },
                 }
             )
-            user_entries[0]["_relationships"]["email_addresses"].append(mail_id)
+            user_entry["_relationships"]["email_addresses"].append(mail_id)
 
     def create_record(self, request_json: dict):
         """Generates a new record from the given request"""
@@ -153,16 +158,27 @@ class MockSuiteCRMServer:
         """
         return list(entry for entry in self.data if entry["id"] in ids)
 
+    def search_by_id(self, entry_id: str) -> dict:
+        """Returns the entry that matches the ID specified
+
+        If no entry is found, it returns an empty dict
+        """
+        found_entries = self.search_by_ids([entry_id])
+        assert len(found_entries) <= 1
+        if found_entries:
+            return found_entries[0]
+
+        return {}
+
     def get_related_entries_for_module(self, entry_id: str, relationship: str):
         """Returns all the entries related to an entry for a given relationship name"""
 
-        entries_found = self.search_by_ids([entry_id])
-        assert len(entries_found) <= 1
-        if not entries_found:
+        entry = self.search_by_id(entry_id)
+        if not entry:
             # NOTE: probably nicer to raise some kind of exception
             return None
 
-        related_ids = entries_found[0]["_relationships"][relationship]
+        related_ids = entry["_relationships"][relationship]
         return self.search_by_ids(related_ids)
 
     def get_entry_by_attribute(self, attribute_name: str, attribute_value):
@@ -231,6 +247,7 @@ class MockSuiteCRMServer:
             "Users": "User",
             "User": "User",
             "EmailAddress": "EmailAddress",
+            "SecurityGroup": "SecurityGroup",
         }
         if module_name not in module_map:
             raise MethodException(
@@ -244,6 +261,7 @@ class MockSuiteCRMServer:
 
         relationships = {
             ("User", "EmailAddress"): "email_addresses",
+            ("User", "SecurityGroup"): "SecurityGroups",
         }
         relation_tuple = (
             MockSuiteCRMServer.map_module(module_name),
@@ -305,25 +323,24 @@ class MockSuiteCRMServer:
             entry_id = kwargs["json"]["data"]["id"]
             entry_type = kwargs["json"]["data"]["type"]
             entry_attributes = kwargs["json"]["data"]["attributes"]
-            found_entries = self.search_by_ids([entry_id])
-            if not found_entries:
+            entry = self.search_by_id(entry_id)
+            if not entry:
                 return self.mock_response(
                     exception=requests.HTTPError(
                         "can't patch an entry that doesn't exist, 404 probably"
                     )
                 )
-            assert len(found_entries) == 1
-            assert found_entries[0]["type"] == entry_type
+            assert entry["type"] == entry_type
 
             if int(entry_attributes.get("deleted", "0")):
                 # We actually want to delete this user
-                self.data.remove(found_entries[0])
+                self.data.remove(entry)
                 return self.mock_response()
 
             # User not deleted, do an ordinary update
             # We didn't copy any dicts when searching, so can just amend the
             # one returned by searching
-            found_entries[0]["attributes"].update(entry_attributes)
+            entry["attributes"].update(entry_attributes)
             return self.mock_response()
 
         raise MethodException(f"Unhandled endpoint '{endpoint}'")
@@ -363,9 +380,8 @@ class MockSuiteCRMServer:
             module_name = query[3]
             module_id = query[4]
 
-            modules_found = self.search_by_ids([module_id])
-            assert len(modules_found) <= 1
-            if not modules_found:
+            module = self.search_by_id(module_id)
+            if not module:
                 return self.mock_response(
                     exception=requests.HTTPError(
                         f"404 probably, no module with ID {module_id}"
@@ -376,7 +392,7 @@ class MockSuiteCRMServer:
                 module_name, kwargs["json"]["data"]["type"]
             )
             related_id = kwargs["json"]["data"]["id"]
-            modules_found[0]["_relationships"][relationship_name].append(related_id)
+            module["_relationships"][relationship_name].append(related_id)
             return self.mock_response()
 
         if endpoint == "/Api/V8/module":
@@ -407,16 +423,15 @@ class MockSuiteCRMServer:
             relationship_name = query[6]
             related_id = query[7]
 
-            modules = self.search_by_ids([module_id])
-            assert len(modules) <= 1
-            if not modules:
+            module = self.search_by_id(module_id)
+            if not module:
                 return self.mock_response(
                     exception=requests.HTTPError(
                         f"404 probably, no module with ID {module_id}"
                     )
                 )
-            assert modules[0]["type"] == module_name
-            modules[0]["_relationships"][relationship_name].remove(related_id)
+            assert module["type"] == module_name
+            module["_relationships"][relationship_name].remove(related_id)
 
             return self.mock_response()
 
