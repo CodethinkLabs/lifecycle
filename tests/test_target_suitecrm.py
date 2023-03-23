@@ -101,7 +101,7 @@ def test_sync_multi_email(basic_target, suitecrm_server):
         added_users={},
         removed_users={},
         unchanged_users={},
-        changed_users={"foobar": before_user},
+        changed_users={"foobar": after_user},
     )
     # Note: default user in the server matches before_user
     server = suitecrm_server()
