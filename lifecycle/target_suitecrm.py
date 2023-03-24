@@ -23,6 +23,7 @@ class TargetSuiteCRM(TargetBase):
         self._token_expiry = 0
         self._users_data = {}
         self._emails_to_id = {}
+        self._groups_to_id = {}
 
     mandatory_fields = {
         "url",
@@ -44,7 +45,8 @@ class TargetSuiteCRM(TargetBase):
         "forename",
         "surname",
         "email",
-        "locked",  # also groups once supported
+        "locked",
+        "groups",
     }
 
     default_config = {
@@ -185,11 +187,17 @@ class TargetSuiteCRM(TargetBase):
         groups = tuple(
             Group(
                 ent["attributes"]["name"],
-                description=ent["attributes"]["description"],
+                description=ent["attributes"].get("description", None),
             )
             for ent in self._fetch_raw_relations_for_user(username, "SecurityGroups")
         )
         return groups
+
+    def _fetch_groups_with_id_for_user(self, username: str) -> dict[str, str]:
+        return {
+            ent["attributes"]["name"]: ent["id"]
+            for ent in self._fetch_raw_relations_for_user(username, "SecurityGroups")
+        }
 
     def fetch_users(self, refresh: bool = False) -> Dict[str, User]:
         """Load the SuiteCRM users"""
@@ -245,9 +253,68 @@ class TargetSuiteCRM(TargetBase):
                 self._emails_to_id[address] = _id
         return self._emails_to_id
 
-    def _add_missing_emails(self, emails):
-        emails_to_id = self._fetch_all_emails(refresh=True)
+    def _fetch_all_groups(self, refresh=False):
+        if not refresh and self._groups_to_id:
+            return self._groups_to_id
+
+        groups_json = list(self._iter_pages("/Api/V8/module/SecurityGroup"))
+
+        self._groups_to_id = {}
+        for ent in groups_json:
+            groupname = ent["attributes"]["name"]
+            _id = ent["id"]
+            if groupname in self._groups_to_id:
+                logging.warning(
+                    (
+                        "Duplicate Group entries found in suitecrm server:"
+                        "Group '%s' has IDs '%s' and '%s'. Using the first one only."
+                    ),
+                    groupname,
+                    self._groups_to_id[groupname],
+                    _id,
+                )
+            else:
+                self._groups_to_id[groupname] = _id
+        return self._groups_to_id
+
+    def _add_missing_groups(self, users: list[User]):
+        """Adds all the groups missing from a list of Users"""
+
+        crm_groups = self._fetch_all_groups()
+        crm_group_names = tuple(crm_groups.keys())
+        lifecycle_groups = set()
+        for user in users:
+            lifecycle_groups |= set(user.groups)
+
+        missing_groups = tuple(
+            group for group in lifecycle_groups if group.name not in crm_group_names
+        )
+        for group in missing_groups:
+            logging.debug(
+                "Creating new Security Group for group named '%s'", group.name
+            )
+            new_group = {
+                "data": {
+                    "type": "SecurityGroup",
+                    "attributes": {
+                        "name": group.name,
+                        "description": group.description,
+                    },
+                }
+            }
+            self._request("/Api/V8/module", method="POST", json=new_group)
+
+        crm_groups = self._fetch_all_groups(refresh=True)
+
+    def _add_missing_emails(self, users: list[User]):
+        emails_to_id = self._fetch_all_emails()
+
+        emails = set()
+        for user in users:
+            emails |= set(user.email)
+
         missing_emails = set(emails) - set(emails_to_id.keys())
+
         for mail in missing_emails:
             logging.debug("Creating new E-mail entry for address '%s'", mail)
             new_mail = {
@@ -259,6 +326,31 @@ class TargetSuiteCRM(TargetBase):
                 }
             }
             self._request("/Api/V8/module", method="POST", json=new_mail)
+
+        self._fetch_all_emails(refresh=True)
+
+    def _assign_group(self, username, group: Group):
+        logging.debug("Assigning Group '%s' to user '%s'", group.name, username)
+        user_id = self._users_data[username]["id"]
+        new_relationship = {
+            "data": {
+                "type": "SecurityGroup",
+                "id": self._groups_to_id[group.name],
+            }
+        }
+        self._request(
+            f"/Api/V8/module/Users/{user_id}/relationships",
+            method="POST",
+            json=new_relationship,
+        )
+
+    def _unassign_group(self, group_id, username):
+        logging.debug("Unassigning Group '%s' from user '%s'", group_id, username)
+        user_id = self._users_data[username]["id"]
+        self._request(
+            f"/Api/V8/module/Users/{user_id}/relationships/SecurityGroups/{group_id}",
+            method="DELETE",
+        )
 
     def _assign_email(self, mail, username):
         logging.debug("Assigning E-mail '%s' to user '%s'", mail, username)
@@ -286,6 +378,7 @@ class TargetSuiteCRM(TargetBase):
 
     def users_create(self, diff: ModelDifference):
         """Create any users missing from the target"""
+
         for user in diff.added_users.values():
             new_user = {
                 "data": {
@@ -304,24 +397,20 @@ class TargetSuiteCRM(TargetBase):
             self._request("/Api/V8/module", method="POST", json=new_user)
             logging.debug("User created successfully")
 
-        # Finish now if none of our new users have more than one E-mail address
-        if not any(len(user.email) > 1 for user in diff.added_users.values()):
-            return
-
-        added_emails = set()
-        for user in diff.added_users.values():
-            for mail in user.email[1:]:
-                added_emails.add(mail)
-        self._add_missing_emails(added_emails)
-
-        # Refresh E-mails so we have the new E-mails' IDs.
-        self._fetch_all_emails(refresh=True)
         # Refresh users so we have the new users' IDs.
         self.fetch_users(refresh=True)
-        # Link E-mail addresses to our new users
+
+        self._add_missing_emails(diff.added_users.values())
+        self._add_missing_groups(diff.added_users.values())
+
         for user in diff.added_users.values():
+            # Link E-mail addresses to our new users
             for mail in user.email[1:]:
                 self._assign_email(mail, user.username)
+
+            # Link SecurityGroups to our new users
+            for group in user.groups:
+                self._assign_group(user.username, group)
 
     def users_cleanup(self, diff: ModelDifference):
         """Remove any users missing from the source
@@ -354,11 +443,53 @@ class TargetSuiteCRM(TargetBase):
                 logging.debug("Deleting user: %s", user.username)
                 self._request("/Api/V8/module", method="PATCH", json=deletion_record)
 
+    def _sync_emails_for_users(self, diff: ModelDifference):
+        for user in diff.changed_users.values():
+            if user.username in self.config["excluded_usernames"]:
+                continue
+
+            source_emails = set(diff.source_users[user.username].email)
+            target_emails = set(diff.target_users[user.username].email)
+            if source_emails == target_emails:
+                # Nothing to do
+                continue
+
+            added_emails = source_emails - target_emails
+            for mail in added_emails:
+                self._assign_email(mail, user.username)
+
+            removed_emails = target_emails - source_emails
+            # It's possible to have multiple entries in the EmailAddress module
+            # that have the same E-mail address but different ID. Use the list
+            # of E-mails for this user to get the right ID.
+            mails_to_ids = self._fetch_emails_with_id_for_user(user.username)
+            for mail in removed_emails:
+                self._unassign_email(mails_to_ids[mail], user.username)
+
+    def _sync_groups_for_users(self, diff: ModelDifference):
+        for user in diff.changed_users.values():
+            if user.username in self.config["excluded_usernames"]:
+                continue
+
+            changed_groups = set(diff.changed_users[user.username].groups)
+            target_groups = set(diff.target_users[user.username].groups)
+            # target_groups is already merged based on groups_patterns
+            if changed_groups == target_groups:
+                # Nothing about group membership changed in this User
+                continue
+
+            # Remove all then re-add to enforce ordering
+            groups_to_ids = self._fetch_groups_with_id_for_user(user.username)
+            for group in target_groups:
+                self._unassign_group(groups_to_ids[group.name], user.username)
+
+            for group in changed_groups:
+                self._assign_group(user.username, group)
+
     def users_sync(self, diff: ModelDifference):
         """Sync the existing users with their values from the source"""
+
         self.fetch_users()
-        all_source_emails = set()
-        all_target_emails = set()
         for user in diff.changed_users.values():
             _id = self._users_data[user.username]["id"]
             if user.username not in self.config["excluded_usernames"]:
@@ -378,33 +509,10 @@ class TargetSuiteCRM(TargetBase):
                 logging.info("Updating user '%s'", user.username)
                 self._request("/Api/V8/module", method="PATCH", json=updated_record)
 
-                all_source_emails |= set(diff.source_users[user.username].email)
-                all_target_emails |= set(diff.target_users[user.username].email)
-
         # Add to suitecrm all E-mail addresses that have been added but don't exist
-        added_emails = all_source_emails - all_target_emails
-        self._add_missing_emails(added_emails)
+        self._add_missing_emails(diff.changed_users.values())
 
-        # Refresh E-mails so we have the new E-mails' IDs.
-        self._fetch_all_emails(refresh=True)
+        self._sync_emails_for_users(diff)
 
-        # For each updated user, assign that user's added E-mails and unassign removed E-mails.
-        for user in diff.changed_users.values():
-            if user.username not in self.config["excluded_usernames"]:
-                source_emails = set(diff.source_users[user.username].email)
-                target_emails = set(diff.target_users[user.username].email)
-                if source_emails == target_emails:
-                    # Nothing to do
-                    continue
-
-                added_emails = source_emails - target_emails
-                for mail in added_emails:
-                    self._assign_email(mail, user.username)
-
-                removed_emails = target_emails - source_emails
-                # It's possible to have multiple entries in the EmailAddress module
-                # that have the same E-mail address but different ID. Use the list
-                # of E-mails for this user to get the right ID.
-                mails_to_ids = self._fetch_emails_with_id_for_user(user.username)
-                for mail in removed_emails:
-                    self._unassign_email(mails_to_ids[mail], user.username)
+        self._add_missing_groups(diff.changed_users.values())
+        self._sync_groups_for_users(diff)
