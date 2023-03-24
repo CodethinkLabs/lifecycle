@@ -12,6 +12,8 @@ class SourceStaticConfig(SourceBase):
 
     An example source config would be::
 
+        groups_patterns:
+            - "^.*$$"
         source:
           module: StaticConfig
           groups:
