@@ -96,7 +96,6 @@ class _Base(ABC):
     def fetch_users(self, refresh: bool = False) -> Dict[str, User]:
         """Load users from services and map to the User model"""
 
-    # pylint: disable-msg=no-self-use
     def process_groups_patterns(self, groups_patterns: list[str]) -> list[str]:
         """Allow sources and targets to modify the list of configured group patterns
 
