@@ -153,14 +153,63 @@ def test_groups_fetch(basic_target, suitecrm_server):
     )
 
 
+def test_groups_sync(basic_config, suitecrm_server):
+    """Replace a user's security groups with a completely different set of groups"""
+    # Create a single user on the server, with a single group
+    server = suitecrm_server()
+    user_id = "0"
+    group_id = server.create_record(
+        {
+            "data": {
+                "type": "SecurityGroup",
+                "attributes": {
+                    "name": "TestGroup",
+                },
+            }
+        }
+    )
+    server.create_relationship("User", user_id, "SecurityGroup", group_id)
+
+    # Create a target whose source config has a user identical except for having different groups
+    target = TargetSuiteCRM(
+        basic_config,
+        SourceStaticConfig(
+            config={
+                "groups": [
+                    {"name": "bargroup"},
+                    {"name": "bazgroup"},
+                ],
+                "users": [
+                    {
+                        "username": "foobar",
+                        "forename": "Foo",
+                        "surname": "Bar",
+                        "fullname": "Foo Bar",
+                        "email": ("foo.bar@example.org",),
+                        "groups": ("bargroup", "bazgroup"),
+                    }
+                ],
+            }
+        ),
+    )
+
+    diff = target.calculate_difference(target.compile_groups_patterns([".*"]))
+    target.users_sync(diff)
+
+    group_entries = server.get_related_entries_for_module(user_id, "SecurityGroups")
+    for group in group_entries:
+        assert group["attributes"]["name"] in ("bargroup", "bazgroup")
+
+
 def test_users_create(basic_target, suitecrm_server):
     """Create some users"""
-    server = suitecrm_server()
+    server = suitecrm_server([])
     diff = basic_target.calculate_difference([])
     old_users = server.search_by_type("User")
     basic_target.users_create(diff)
     new_users = server.search_by_type("User")
     assert len(new_users) > len(old_users)
+    assert len(new_users[0]["_relationships"]["SecurityGroups"]) > 0
 
 
 def test_users_update(basic_config, suitecrm_server):
