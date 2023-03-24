@@ -46,6 +46,8 @@ One config file
 
 A single config file name config.yml might contain::
 
+    groups_patterns:
+        - "^.*$$"
     source:
       module: StaticConfig
       groups:
@@ -78,6 +80,8 @@ Multiple config files
 As multiple files, this might be:
 config/static_source.yml::
 
+    groups_patterns:
+        - "^.*$$"
     source:
       module: StaticConfig
       groups:
@@ -114,6 +118,8 @@ Environment variable substitutions will be performed into config files.
 
 For example, a config file name config.yml::
 
+    groups_patterns:
+        - "^.*$$"
     source:
       module: StaticConfig
       groups:
