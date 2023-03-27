@@ -89,9 +89,9 @@ class ModelDifferenceConfig:
                 raise InvalidField(field)
 
         try:
-            if "groups" in config_fields and "groups_patterns" in config_dict:
-                for pattern in config_dict["groups_patterns"]:
-                    groups_patterns.append(re.compile(pattern))
+            if "groups" in config_fields:
+                patterns = config_dict.get("groups_patterns", [".*"])
+                groups_patterns = [re.compile(pattern) for pattern in patterns]
         except re.error as error:
             raise InvalidRegex(error.msg, error.pattern) from error
 

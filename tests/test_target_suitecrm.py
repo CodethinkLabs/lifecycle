@@ -204,7 +204,7 @@ def test_groups_sync(basic_config, suitecrm_server):
 def test_users_create(basic_target, suitecrm_server):
     """Create some users"""
     server = suitecrm_server([])
-    diff = basic_target.calculate_difference([])
+    diff = basic_target.calculate_difference()
     old_users = server.search_by_type("User")
     basic_target.users_create(diff)
     new_users = server.search_by_type("User")
