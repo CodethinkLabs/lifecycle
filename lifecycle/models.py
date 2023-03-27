@@ -38,6 +38,9 @@ class Group(ModelBase):
     description: str = ""
     email: tuple[str] = field(default_factory=tuple)
 
+    def __post_init__(self):
+        self.email = tuple(self.email)
+
 
 @dataclass(unsafe_hash=True, order=True)
 class User(ModelBase):
@@ -74,3 +77,6 @@ class User(ModelBase):
             if self.surname:
                 tmp_fullname.append(self.surname)
             self.fullname = " ".join(tmp_fullname)
+
+        self.email = tuple(self.email)
+        self.groups = tuple(self.groups)

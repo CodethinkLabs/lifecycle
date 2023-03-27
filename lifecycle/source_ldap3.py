@@ -129,6 +129,6 @@ class SourceLDAP3(SourceBase):
                         components = member.split(",")
                         uid = components[0].split("=")[1]
                         if uid in self.users:
-                            self.users[uid].groups.append(group)
+                            self.users[uid].groups += (group,)
         else:
             logging.debug("No groups found")

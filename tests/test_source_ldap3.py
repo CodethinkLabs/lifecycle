@@ -124,7 +124,7 @@ def test_current_user(source, ldap_connection):
     assert user.surname == "Smith"
     assert user.fullname == "John Smith"
     assert user.forename == "John"
-    assert user.email == ["john.smith@example.org"]
+    assert user.email == ("john.smith@example.org",)
     assert len(user.groups) == 0
 
     my_group_data = [
@@ -145,4 +145,4 @@ def test_current_user(source, ldap_connection):
     group = user.groups[0]
     assert group.name == "ipausers"
     assert group.description == "Built In Default group for all users"
-    assert group.email == ["ipausers@example.org"]
+    assert group.email == ("ipausers@example.org",)
