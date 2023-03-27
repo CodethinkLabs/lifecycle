@@ -151,8 +151,12 @@ class TargetBase(_Base):
                     )
                     continue
 
-    def calculate_difference(self, groups_patterns: list[re.Pattern]):
+    def calculate_difference(self, groups_patterns: list[re.Pattern] = None):
         """Calculates the difference between the users in the source and the users in the target"""
+
+        if groups_patterns is None:
+            groups_patterns = [re.compile(".*")]
+
         self.source.fetch()
         source_users = self.source.fetch_users()
         target_users = self.fetch_users()
