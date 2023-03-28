@@ -341,6 +341,110 @@ def test_groups_emails_sync_no_changes(basic_config, suitecrm_server):
     assert not diff.changed_users
 
 
+def test_group_sync_update_not_recreate(basic_config, suitecrm_server):
+    """Tests that when a group differs between the source and the target,
+    it is updated rather than recreated
+    """
+
+    server = suitecrm_server()
+    user_id = server.data[0]["id"]  # Assumes server has only one user
+    group_id = server.create_record(
+        {
+            "data": {
+                "type": "SecurityGroup",
+                "attributes": {
+                    "name": "TestGroup",
+                    "description": "Test Group",
+                },
+            }
+        }
+    )
+    server.create_relationship("User", user_id, "SecurityGroup", group_id)
+    target = TargetSuiteCRM(
+        basic_config,
+        SourceStaticConfig(
+            config={
+                "groups": [
+                    {
+                        "name": "TestGroup",
+                        "description": "Testy Test Group",
+                    },
+                ],
+                "users": [
+                    {
+                        "username": "foobar",
+                        "forename": "Foo",
+                        "surname": "Bar",
+                        "fullname": "Foo Bar",
+                        "email": ("foo.bar@example.org",),
+                        "groups": ("TestGroup",),
+                    }
+                ],
+            }
+        ),
+    )
+    target.process_stages([".*"])
+    new_groups = server.search_by_type("SecurityGroup")
+    assert len(new_groups) == 1, "A new group was created"
+    assert (
+        new_groups[0]["id"] == group_id
+    ), "The old group was deleted and a new group created"
+    assert (
+        new_groups[0]["attributes"]["description"] == "Testy Test Group"
+    ), "The old group wasn't updated"
+
+
+def test_group_add_update_not_recreate(basic_config, suitecrm_server):
+    """Tests that when a user is added, it updates existing groups
+    rather than adding new ones
+    """
+
+    server = suitecrm_server([])
+    group_id = server.create_record(
+        {
+            "data": {
+                "type": "SecurityGroup",
+                "attributes": {
+                    "name": "TestGroup",
+                    "description": "Test Group",
+                },
+            }
+        }
+    )
+    target = TargetSuiteCRM(
+        basic_config,
+        SourceStaticConfig(
+            config={
+                "groups": [
+                    {
+                        "name": "TestGroup",
+                        "description": "Testy Test Group",
+                    },
+                ],
+                "users": [
+                    {
+                        "username": "bazquux",
+                        "forename": "Baz",
+                        "surname": "Quux",
+                        "fullname": "Baz Quux",
+                        "email": ("baz.quux@example.org",),
+                        "groups": ("TestGroup",),
+                    },
+                ],
+            }
+        ),
+    )
+    target.process_stages([".*"])
+    new_groups = server.search_by_type("SecurityGroup")
+    assert len(new_groups) == 1, "A new group was created"
+    assert (
+        new_groups[0]["id"] == group_id
+    ), "The old group was deleted and a new group created"
+    assert (
+        new_groups[0]["attributes"]["description"] == "Testy Test Group"
+    ), "The old group wasn't updated"
+
+
 @pytest.fixture(name="basic_source")
 def fixture_source():
     """We need a source to set up a proper SuiteCRM target"""
