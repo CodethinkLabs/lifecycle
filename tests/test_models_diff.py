@@ -174,3 +174,75 @@ def test_groups_differ_by_pattern():
     )
     assert "test1" in diff.unchanged_users
     assert "test2" in diff.changed_users
+
+
+def test_groups_ignore_ordering():
+    """Tests that having groups in a different order doesn't count as a changed user"""
+    source_data = {
+        "test1": User("test1", groups=(Group("FooGroup"), Group("BarGroup"))),
+    }
+    target_data = {
+        "test1": User("test1", groups=(Group("BarGroup"), Group("FooGroup"))),
+    }
+    config = {
+        "fields": [
+            "username",
+            "groups",
+        ]
+    }
+    diff = ModelDifference.calculate(
+        source_data, target_data, ModelDifferenceConfig.from_dict(config)
+    )
+    assert "test1" in diff.unchanged_users
+
+
+def test_email_ignore_ordering():
+    """Tests that having emails in a different order doesn't count as a changed user"""
+    source_data = {
+        "test1": User("test1", email=("foo.bar@example.org", "foo.bar@example.com")),
+    }
+    target_data = {
+        "test1": User("test1", email=("foo.bar@example.com", "foo.bar@example.org")),
+    }
+    config = {
+        "fields": [
+            "username",
+            "email",
+        ]
+    }
+    diff = ModelDifference.calculate(
+        source_data, target_data, ModelDifferenceConfig.from_dict(config)
+    )
+    assert "test1" in diff.unchanged_users
+
+
+def test_group_email_ignore_ordering():
+    """Tests that having E-mail addresses inside a group in a different order
+    doesn't count as a changed user
+    """
+    source_data = {
+        "test1": User(
+            "test1",
+            groups=(
+                Group("FooGroup", email=("foo.bar@example.org", "foo.bar@example.com")),
+            ),
+        ),
+    }
+    target_data = {
+        "test1": User(
+            "test1",
+            groups=(
+                Group("FooGroup", email=("foo.bar@example.com", "foo.bar@example.org")),
+            ),
+        ),
+    }
+    config = {
+        "fields": [
+            "username",
+            "email",
+        ]
+    }
+    diff = ModelDifference.calculate(
+        source_data, target_data, ModelDifferenceConfig.from_dict(config)
+    )
+    assert "test1" in diff.unchanged_users
