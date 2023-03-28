@@ -7,7 +7,7 @@ import re
 from typing import Dict, Optional
 
 from .model_diff import ModelDifference, ModelDifferenceConfig
-from .models import User
+from .models import Group, User
 
 
 class LifecycleException(Exception):
@@ -64,6 +64,7 @@ class _Base(ABC):
     optional_fields = set()
     default_config = {}
     supported_user_fields = User.supported_fields()
+    supported_group_fields = Group.supported_fields()
 
     def __init__(self, config: Dict):
         self.users = {}
@@ -163,6 +164,8 @@ class TargetBase(_Base):
         diff_config = ModelDifferenceConfig(
             fields=self.source.supported_user_fields & self.supported_user_fields,
             groups_patterns=groups_patterns,
+            group_fields=self.source.supported_group_fields
+            & self.supported_group_fields,
         )
         difference = ModelDifference.calculate(source_users, target_users, diff_config)
         return difference

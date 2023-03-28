@@ -49,6 +49,11 @@ class TargetSuiteCRM(TargetBase):
         "groups",
     }
 
+    supported_group_fields = {
+        "name",
+        "description",
+    }
+
     default_config = {
         "api_page_size": 20,
         "stages": ["users_create", "users_sync", "users_disable", "users_cleanup"],

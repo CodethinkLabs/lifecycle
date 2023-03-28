@@ -193,7 +193,7 @@ def test_groups_sync(basic_config, suitecrm_server):
         ),
     )
 
-    diff = target.calculate_difference(target.compile_groups_patterns([".*"]))
+    diff = target.calculate_difference()
     target.users_sync(diff)
 
     group_entries = server.get_related_entries_for_module(user_id, "SecurityGroups")
@@ -290,6 +290,55 @@ def test_users_delete(basic_config, suitecrm_server):
     target.users_cleanup(diff)
     users = server.search_by_type("User")
     assert len(users) == 0
+
+
+def test_groups_emails_sync_no_changes(basic_config, suitecrm_server):
+    """Test that when a user is part of a group with an E-mail address,
+    it doesn't always think that user has changed.
+
+    This is because SuiteCRM does not have an E-mail address field for
+    SecurityGroups.
+    """
+    server = suitecrm_server()
+    user_id = server.data[0]["id"]  # Assumes server has only one user
+    group_id = server.create_record(
+        {
+            "data": {
+                "type": "SecurityGroup",
+                "attributes": {
+                    "name": "TestGroup",
+                    "description": "Testy Test Group",
+                },
+            }
+        }
+    )
+    server.create_relationship("User", user_id, "SecurityGroup", group_id)
+    target = TargetSuiteCRM(
+        basic_config,
+        SourceStaticConfig(
+            config={
+                "groups": [
+                    {
+                        "name": "TestGroup",
+                        "description": "Testy Test Group",
+                        "email": ("test.group@example.org",),
+                    },
+                ],
+                "users": [
+                    {
+                        "username": "foobar",
+                        "forename": "Foo",
+                        "surname": "Bar",
+                        "fullname": "Foo Bar",
+                        "email": ("foo.bar@example.org",),
+                        "groups": ("TestGroup",),
+                    }
+                ],
+            }
+        ),
+    )
+    diff = target.calculate_difference()
+    assert not diff.changed_users
 
 
 @pytest.fixture(name="basic_source")

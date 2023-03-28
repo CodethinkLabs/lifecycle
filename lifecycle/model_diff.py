@@ -12,7 +12,7 @@ class ModelDifferenceError(Exception):
     """An error that originates from the ModelDifference module"""
 
 
-class InvalidField(ModelDifferenceError):
+class InvalidUserField(ModelDifferenceError):
     """A field listed in the config is not part of the User class"""
 
     message: str
@@ -20,6 +20,17 @@ class InvalidField(ModelDifferenceError):
 
     def __init__(self, field):
         super().__init__(self, f"Field '{field}' not found in the 'User' class")
+        self.field = field
+
+
+class InvalidGroupField(ModelDifferenceError):
+    """A field listed in the config is not part of the Group class"""
+
+    message: str
+    field: str
+
+    def __init__(self, field):
+        super().__init__(self, f"Field '{field}' not found in the 'Group' class")
         self.field = field
 
 
@@ -60,13 +71,19 @@ class ModelDifferenceConfig:
     e.g. ``[re.compile(r'^everyone$'), re.compile(r'^\w\w\d\d\d$')]``
     """
 
+    group_fields: List[str]
+    """groups_fields: The fields in the Group that matter if they differ
+
+    e.g. ``["name", "description"]``
+    """
+
     @staticmethod
     def from_dict(config_dict: Dict):
         r"""Parses a dict of possible config values, validates and returns a
         ModelDifferenceConfig
 
         The Dict expects to have an entry called "fields" that is a list of
-        fields, e.g::
+        fields for a User, e.g::
 
             fields:
             - username
@@ -79,14 +96,26 @@ class ModelDifferenceConfig:
             groups_patterns:
             - '^everyone$'
             - '^\w\w\d\d\d$'
+
+        It may also have an entry called "groups_fields" that is a list of
+        fields for a Group, e.g.::
+
+            group_fields:
+            - name
+            - description
         """
 
         config_fields = config_dict["fields"]
         groups_patterns = []
-        user_fields = [f.name for f in dataclasses.fields(User)]
         for field in config_fields:
-            if field not in user_fields:
-                raise InvalidField(field)
+            if field not in User.supported_fields():
+                raise InvalidUserField(field)
+
+        group_fields = config_dict.get("group_fields", None)
+        if group_fields:
+            for field in group_fields:
+                if field not in Group.supported_fields():
+                    raise InvalidGroupField(field)
 
         try:
             if "groups" in config_fields:
@@ -95,7 +124,7 @@ class ModelDifferenceConfig:
         except re.error as error:
             raise InvalidRegex(error.msg, error.pattern) from error
 
-        return ModelDifferenceConfig(config_fields, groups_patterns)
+        return ModelDifferenceConfig(config_fields, groups_patterns, group_fields)
 
 
 # pylint: disable-msg=too-few-public-methods
@@ -163,11 +192,46 @@ class ModelDifference:
                 target_matches = ModelDifference._list_group_matches(
                     target_user, config
                 )
-                if source_matches != target_matches:
+                if ModelDifference._groups_differ(
+                    source_matches, target_matches, config
+                ):
                     return True
             elif getattr(source_user, field) != getattr(target_user, field):
                 return True
 
+        return False
+
+    @staticmethod
+    def _groups_differ(
+        source_groups: set[Group],
+        target_groups: set[Group],
+        config: ModelDifferenceConfig,
+    ) -> bool:
+        """Checks whether two Groups differ using the given config rules"""
+
+        # No special config, are they directly equal?
+        if not config.group_fields:
+            return source_groups != target_groups
+
+        # These obviously differ if one is missing
+        if len(source_groups) != len(target_groups):
+            return True
+
+        target_by_name = {g.name: g for g in target_groups}
+
+        for source_group in source_groups:
+            # Also obviously differ if one is missing from the other
+            if source_group.name not in target_by_name:
+                return True
+
+            target_group = target_by_name[source_group.name]
+            # Also differ if any field in the list is different
+            if any(
+                field
+                for field in config.group_fields
+                if getattr(source_group, field) != getattr(target_group, field)
+            ):
+                return True
         return False
 
     @staticmethod
