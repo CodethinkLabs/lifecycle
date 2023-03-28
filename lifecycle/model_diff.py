@@ -1,5 +1,6 @@
 """Tools for calculating the difference between the source and the target models"""
 
+from collections.abc import Iterable
 import copy
 import dataclasses
 import re
@@ -71,7 +72,7 @@ class ModelDifferenceConfig:
     e.g. ``[re.compile(r'^everyone$'), re.compile(r'^\w\w\d\d\d$')]``
     """
 
-    group_fields: List[str]
+    group_fields: List[str] = dataclasses.field(default_factory=Group.supported_fields)
     """groups_fields: The fields in the Group that matter if they differ
 
     e.g. ``["name", "description"]``
@@ -124,7 +125,10 @@ class ModelDifferenceConfig:
         except re.error as error:
             raise InvalidRegex(error.msg, error.pattern) from error
 
-        return ModelDifferenceConfig(config_fields, groups_patterns, group_fields)
+        if group_fields:
+            return ModelDifferenceConfig(config_fields, groups_patterns, group_fields)
+
+        return ModelDifferenceConfig(config_fields, groups_patterns)
 
 
 # pylint: disable-msg=too-few-public-methods
@@ -177,6 +181,13 @@ class ModelDifference:
         return matched
 
     @staticmethod
+    def _values_differ(source_value, target_value):
+        if isinstance(source_value, Iterable):
+            source_value = sorted(source_value)
+            target_value = sorted(target_value)
+        return source_value != target_value
+
+    @staticmethod
     def _users_differ(
         source_user: User, target_user: User, config: ModelDifferenceConfig
     ) -> bool:
@@ -196,7 +207,9 @@ class ModelDifference:
                     source_matches, target_matches, config
                 ):
                     return True
-            elif getattr(source_user, field) != getattr(target_user, field):
+            elif ModelDifference._values_differ(
+                getattr(source_user, field), getattr(target_user, field)
+            ):
                 return True
 
         return False
@@ -208,10 +221,6 @@ class ModelDifference:
         config: ModelDifferenceConfig,
     ) -> bool:
         """Checks whether two Groups differ using the given config rules"""
-
-        # No special config, are they directly equal?
-        if not config.group_fields:
-            return source_groups != target_groups
 
         # These obviously differ if one is missing
         if len(source_groups) != len(target_groups):
@@ -226,12 +235,11 @@ class ModelDifference:
 
             target_group = target_by_name[source_group.name]
             # Also differ if any field in the list is different
-            if any(
-                field
-                for field in config.group_fields
-                if getattr(source_group, field) != getattr(target_group, field)
-            ):
-                return True
+            for field in config.group_fields:
+                if ModelDifference._values_differ(
+                    getattr(source_group, field), getattr(target_group, field)
+                ):
+                    return True
         return False
 
     @staticmethod
