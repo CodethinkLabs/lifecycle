@@ -3,8 +3,9 @@
 import pytest
 
 from lifecycle.model_diff import (
-    InvalidField,
+    InvalidGroupField,
     InvalidRegex,
+    InvalidUserField,
     ModelDifference,
     ModelDifferenceConfig,
 )
@@ -96,7 +97,27 @@ def test_config_field_no_exist():
         "fields": ["foobarbaz"],
     }
 
-    with pytest.raises(InvalidField):
+    with pytest.raises(InvalidUserField):
+        ModelDifference.calculate(
+            source_data, target_data, ModelDifferenceConfig.from_dict(config)
+        )
+
+
+def test_config_group_field_no_exist():
+    """Test that it catches config using group fields that don't exist"""
+
+    source_data = {
+        "test1": User("test1"),
+    }
+    target_data = {
+        "test2": User("test2"),
+    }
+    config = {
+        "fields": ["username"],
+        "group_fields": ["foobarbaz"],
+    }
+
+    with pytest.raises(InvalidGroupField):
         ModelDifference.calculate(
             source_data, target_data, ModelDifferenceConfig.from_dict(config)
         )
