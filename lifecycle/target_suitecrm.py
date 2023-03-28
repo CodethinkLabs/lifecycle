@@ -38,6 +38,7 @@ class TargetSuiteCRM(TargetBase):
         "stages",
         "users_cleanup",
         "excluded_usernames",
+        "admin_groups",
     }
 
     supported_user_fields = {
@@ -59,6 +60,15 @@ class TargetSuiteCRM(TargetBase):
         "stages": ["users_create", "users_sync", "users_disable", "users_cleanup"],
         "excluded_usernames": [],
     }
+
+    def process_groups_patterns(self, groups_patterns: list[str]) -> list[str]:
+        """Add the groups required by suitecrm config"""
+
+        groups_patterns += [
+            (r"^" + grp + r"$") for grp in self.config.get("admin_groups", [])
+        ]
+
+        return groups_patterns
 
     def _authenticate(self):
         """Authenticate with SuiteCRM and acquire an access token"""
@@ -381,6 +391,10 @@ class TargetSuiteCRM(TargetBase):
             method="DELETE",
         )
 
+    def _user_is_admin(self, user: User) -> bool:
+        user_groups = {group.name for group in user.groups}
+        return user_groups & set(self.config.get("admin_groups", []))
+
     def users_create(self, diff: ModelDifference):
         """Create any users missing from the target"""
 
@@ -395,6 +409,7 @@ class TargetSuiteCRM(TargetBase):
                         "external_auth_only": 1,
                         "email1": user.email[0] if user.email else "",
                         "status": "Inactive" if user.locked else "Active",
+                        "is_admin": "1" if self._user_is_admin(user) else "0",
                     },
                 }
             }
@@ -508,6 +523,7 @@ class TargetSuiteCRM(TargetBase):
                             "last_name": user.surname,
                             "email1": user.email[0] if user.email else "",
                             "status": "Inactive" if user.locked else "Active",
+                            "is_admin": "1" if self._user_is_admin(user) else "0",
                         },
                     }
                 }

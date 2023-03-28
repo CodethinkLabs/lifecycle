@@ -124,6 +124,8 @@ targets:
     api_client_secret: ${OAUTH_CLIENT_SECRET}
     excluded_usernames:
       - "${OAUTH_USER_NAME}"
+    admin_groups:
+      - "sales_admins"
 EOF
 
 echo "Reattaching docker-compose process, terminate with Ctrl-C"

@@ -212,6 +212,48 @@ def test_users_create(basic_target, suitecrm_server):
     assert len(new_users[0]["_relationships"]["SecurityGroups"]) > 0
 
 
+def test_users_create_admin_group(basic_config, suitecrm_server):
+    """Declare a group as an admin group and check whether is_admin is set
+    based on membership of that group
+    """
+    server = suitecrm_server([])
+    config = basic_config.copy()
+    config["admin_groups"] = ["AdminGroup"]
+    target = TargetSuiteCRM(
+        config,
+        SourceStaticConfig(
+            config={
+                "groups": [
+                    {"name": "AdminGroup"},
+                ],
+                "users": [
+                    {
+                        "username": "foobar",
+                        "forename": "Foo",
+                        "surname": "Bar",
+                        "fullname": "Foo Bar",
+                        "email": ("foo.bar@example.org",),
+                        "groups": ("AdminGroup",),
+                    },
+                    {
+                        "username": "bazquux",
+                        "forename": "Baz",
+                        "surname": "Quux",
+                        "fullname": "Baz Quux",
+                        "email": ("baz.quux@example.org",),
+                        "groups": tuple(),
+                    },
+                ],
+            },
+        ),
+    )
+    diff = target.calculate_difference()
+    target.users_create(diff)
+    users = server.search_by_type("User")
+    assert users[0]["attributes"]["is_admin"] == "1"
+    assert users[1]["attributes"]["is_admin"] == "0"
+
+
 def test_users_update(basic_config, suitecrm_server):
     """Update the attributes of an existing user and check the changes have
     been made
