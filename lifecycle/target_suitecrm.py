@@ -24,6 +24,7 @@ class TargetSuiteCRM(TargetBase):
         self._users_data = {}
         self._emails_to_id = {}
         self._groups_to_id = {}
+        self._groups_to_attributes = {}
 
     mandatory_fields = {
         "url",
@@ -265,6 +266,7 @@ class TargetSuiteCRM(TargetBase):
         groups_json = list(self._iter_pages("/Api/V8/module/SecurityGroup"))
 
         self._groups_to_id = {}
+        self._groups_to_attributes = {}
         for ent in groups_json:
             groupname = ent["attributes"]["name"]
             _id = ent["id"]
@@ -280,36 +282,66 @@ class TargetSuiteCRM(TargetBase):
                 )
             else:
                 self._groups_to_id[groupname] = _id
+                self._groups_to_attributes[groupname] = ent["attributes"]
         return self._groups_to_id
 
-    def _add_missing_groups(self, users: list[User]):
-        """Adds all the groups missing from a list of Users"""
-
-        crm_groups = self._fetch_all_groups()
-        crm_group_names = tuple(crm_groups.keys())
-        lifecycle_groups = set()
-        for user in users:
-            lifecycle_groups |= set(user.groups)
-
-        missing_groups = tuple(
-            group for group in lifecycle_groups if group.name not in crm_group_names
-        )
-        for group in missing_groups:
-            logging.debug(
-                "Creating new Security Group for group named '%s'", group.name
-            )
-            new_group = {
-                "data": {
-                    "type": "SecurityGroup",
-                    "attributes": {
-                        "name": group.name,
-                        "description": group.description,
-                    },
-                }
+    def _create_group(self, group: Group):
+        logging.debug("Creating new Security Group for group named '%s'", group.name)
+        new_group = {
+            "data": {
+                "type": "SecurityGroup",
+                "attributes": {
+                    "name": group.name,
+                    "description": group.description,
+                },
             }
-            self._request("/Api/V8/module", method="POST", json=new_group)
+        }
+        self._request("/Api/V8/module", method="POST", json=new_group)
 
-        crm_groups = self._fetch_all_groups(refresh=True)
+    def _update_group(self, group: Group):
+        logging.debug("Updating Security Group named '%s'", group.name)
+        crm_groups = self._fetch_all_groups()
+        group_id = crm_groups[group.name]
+        # How do I get the group ID?
+        updated_group = {
+            "data": {
+                "type": "SecurityGroup",
+                "id": group_id,
+                "attributes": {
+                    # name can't be changed because that's our primary key
+                    "description": group.description
+                    # SecurityGroups don't have an E-mail field
+                },
+            }
+        }
+        self._request("/Api/V8/module", method="PATCH", json=updated_group)
+
+    @staticmethod
+    def _group_differs(lifecycle_group: Group, crm_group_attributes: dict) -> bool:
+        assert lifecycle_group.name == crm_group_attributes["name"]
+        if lifecycle_group.description != crm_group_attributes["description"]:
+            return True
+        return False
+
+    def _sync_groups(self, users: list[User]):
+        """Sync (add missing and update changed) groups for a list of Users"""
+
+        # Fortunately, since we fetched and diffed, we already know which groups are missing
+
+        names_to_ids = self._fetch_all_groups()
+        all_groups = set()
+        for user in users:
+            if user.groups:
+                all_groups |= set(user.groups)
+
+        for group in all_groups:
+            if group.name in names_to_ids:
+                if self._group_differs(group, self._groups_to_attributes[group.name]):
+                    self._update_group(group)
+            else:
+                self._create_group(group)
+
+        self._fetch_all_groups(refresh=True)
 
     def _add_missing_emails(self, users: list[User]):
         emails_to_id = self._fetch_all_emails()
@@ -405,9 +437,9 @@ class TargetSuiteCRM(TargetBase):
         # Refresh users so we have the new users' IDs.
         self.fetch_users(refresh=True)
 
-        self._add_missing_emails(diff.added_users.values())
-        self._add_missing_groups(diff.added_users.values())
+        self._sync_groups(diff.added_users.values())
 
+        self._add_missing_emails(diff.added_users.values())
         for user in diff.added_users.values():
             # Link E-mail addresses to our new users
             for mail in user.email[1:]:
@@ -471,7 +503,7 @@ class TargetSuiteCRM(TargetBase):
             for mail in removed_emails:
                 self._unassign_email(mails_to_ids[mail], user.username)
 
-    def _sync_groups_for_users(self, diff: ModelDifference):
+    def _sync_group_membership_for_users(self, diff: ModelDifference):
         for user in diff.changed_users.values():
             if user.username in self.config["excluded_usernames"]:
                 continue
@@ -519,5 +551,5 @@ class TargetSuiteCRM(TargetBase):
 
         self._sync_emails_for_users(diff)
 
-        self._add_missing_groups(diff.changed_users.values())
-        self._sync_groups_for_users(diff)
+        self._sync_groups(diff.changed_users.values())
+        self._sync_group_membership_for_users(diff)
