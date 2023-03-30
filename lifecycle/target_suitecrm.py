@@ -384,7 +384,7 @@ class TargetSuiteCRM(TargetBase):
             }
         }
         self._request(
-            f"/Api/V8/module/Users/{user_id}/relationships",
+            f"/Api/V8/module/Users/{user_id}/relationships/SecurityGroups",
             method="POST",
             json=new_relationship,
         )

@@ -16,6 +16,7 @@ class MethodException(LifecycleException):
     """Called when a method is called incorrectly or isn't valid"""
 
 
+# pylint: disable-msg=too-many-public-methods
 class MockSuiteCRMServer:
     """A substitute for a SuiteCRM server, useful in testing"""
 
@@ -349,10 +350,15 @@ class MockSuiteCRMServer:
 
         raise MethodException(f"Unhandled endpoint '{endpoint}'")
 
-    def create_relationship(
-        self, entry_type: str, entry_id: str, related_type: str, related_id: str
+    def create_relationship_by_name(
+        self,
+        entry_type: str,
+        entry_id: str,
+        related_id: str,
+        relationship_name: str,
     ) -> MagicMock:
-        """Creates a relationship between two entries, returning a mock response"""
+        """Creates a relationship between two entries, returngin a mock response"""
+
         entry_type = self.map_module(entry_type)
         entry = self.search_by_id(entry_id)
         if not entry:
@@ -362,9 +368,20 @@ class MockSuiteCRMServer:
                 )
             )
         assert entry_type == entry["type"]
-        relationship_name = self.map_relationship(entry_type, related_type)
         entry["_relationships"][relationship_name].append(related_id)
         return self.mock_response()
+
+    def create_relationship(
+        self, entry_type: str, entry_id: str, related_type: str, related_id: str
+    ) -> MagicMock:
+        """Creates a relationship between two entries, returning a mock response"""
+        relationship_name = self.map_relationship(entry_type, related_type)
+        return self.create_relationship_by_name(
+            entry_type,
+            entry_id,
+            related_id,
+            relationship_name,
+        )
 
     def mock_post(self, endpoint, **kwargs):
         """Simulates a POST request to the SuiteCRM server"""
@@ -405,6 +422,24 @@ class MockSuiteCRMServer:
                 module_id,
                 kwargs["json"]["data"]["type"],
                 kwargs["json"]["data"]["id"],
+            )
+
+        if (
+            len(query) == 7
+            and query[1] == "V8"
+            and query[2] == "module"
+            and query[5] == "relationships"
+        ):
+            # /Api/V8/module/<modulename>/<module_id>/relationships/<relationship_name>
+            module_name = query[3]
+            module_id = query[4]
+            relationship_name = query[6]
+            related_id = kwargs["json"]["data"]["id"]
+            return self.create_relationship_by_name(
+                module_name,
+                module_id,
+                related_id,
+                relationship_name,
             )
 
         if endpoint == "/Api/V8/module":
