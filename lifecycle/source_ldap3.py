@@ -72,6 +72,7 @@ class SourceLDAP3(SourceBase):
                 "description",
                 "uid",
                 "mail",
+                "mailAlternateAddress",
                 "surName",
                 "givenName",
                 "nsAccountLock",
@@ -86,11 +87,15 @@ class SourceLDAP3(SourceBase):
                     uid = user_account["uid"][0]
                     ns_account_lock = user_account["nsAccountLock"]
                     locked = len(ns_account_lock) > 0 and ns_account_lock[0] == "TRUE"
+                    email = tuple(
+                        user_account["mail"]
+                        + user_account.get("mailAlternateAddress", [])
+                    )
                     user = User(
                         uid,
                         forename=user_account["givenName"][0],
                         surname=user_account["surName"][0],
-                        email=user_account["mail"],
+                        email=email,
                         groups=[],
                         locked=locked,
                     )
