@@ -128,7 +128,6 @@ class TargetSuiteCRM(TargetBase):
 
     def _iter_pages(self, endpoint: str, page: int = 1):
         """Generator for handling paginated responses from the SuiteCRM API"""
-        logging.debug("Iterating through entries")
         params = {
             "page[size]": self.config["api_page_size"],
             "page[number]": page,
@@ -140,10 +139,9 @@ class TargetSuiteCRM(TargetBase):
             # if you request something that's empty, you get nothing
             # but it's hard to guess ahead-of-time whether it'll be empty
             total_pages = _json["meta"]["total-pages"]
-            while page < total_pages:
+            if page < total_pages:
                 page += 1
                 yield from self._iter_pages(endpoint, page)
-        logging.debug("Done iterating")
 
     def _user_relationship_endpoint(self, username: str, relationship_type: str) -> str:
         """Returns the API endpoint for the relationship of a given type to a given user"""
