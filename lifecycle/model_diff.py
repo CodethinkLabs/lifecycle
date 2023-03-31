@@ -158,26 +158,15 @@ class ModelDifference:
     """unchanged_users: Dict of users that have not been changed in the source."""
 
     @staticmethod
-    def _list_groups(
-        user: User, config: ModelDifferenceConfig
-    ) -> tuple[set[Group], set[Group]]:
-        """Generates a tuple of all groups in a User that match the configured patterns,
-        and all groups that don't match
-        """
-        matched = set(
+    def _list_group_matches(user: User, config: ModelDifferenceConfig) -> tuple[Group]:
+        """Generates a tuple of all groups in a User that match the configured patterns"""
+        matched = tuple(
             group
             for group in user.groups
             if any(
                 re.fullmatch(pattern, group.name) for pattern in config.groups_patterns
             )
         )
-
-        unmatched = set(user.groups) - matched
-        return matched, unmatched
-
-    @staticmethod
-    def _list_group_matches(user: User, config: ModelDifferenceConfig) -> set[Group]:
-        matched, _ = ModelDifference._list_groups(user, config)
         return matched
 
     @staticmethod
@@ -194,17 +183,9 @@ class ModelDifference:
         """Checks whether two Users differ using the given config rules"""
 
         for field in config.fields:
-            if field == "groups" and config.groups_patterns:
-                # If the list of matches to the source_user *doesn't* equal the
-                # list of matches to the target_user, it differs.
-                source_matches = ModelDifference._list_group_matches(
-                    source_user, config
-                )
-                target_matches = ModelDifference._list_group_matches(
-                    target_user, config
-                )
+            if field == "groups":
                 if ModelDifference._groups_differ(
-                    source_matches, target_matches, config
+                    source_user.groups, target_user.groups, config
                 ):
                     return True
             elif ModelDifference._values_differ(
@@ -252,14 +233,7 @@ class ModelDifference:
 
         merged_user = copy.deepcopy(target_user)
         for field in config.fields:
-            if field == "groups" and config.groups_patterns:
-                # Include all matched patterns from the source
-                # and all unmatched patterns from the target
-                source_groups, _ = ModelDifference._list_groups(source_user, config)
-                _, target_groups = ModelDifference._list_groups(target_user, config)
-                merged_user.groups = sorted(source_groups | target_groups)
-            else:
-                setattr(merged_user, field, getattr(source_user, field))
+            setattr(merged_user, field, getattr(source_user, field))
 
         return merged_user
 
@@ -272,6 +246,10 @@ class ModelDifference:
         """Calculates the differences between the source_users and target_users
         and returns that as a ModelDifference
         """
+
+        if config.groups_patterns:
+            for user in source_users.values():
+                user.groups = ModelDifference._list_group_matches(user, config)
 
         added_users = {
             user: data

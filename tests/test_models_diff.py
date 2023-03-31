@@ -151,15 +151,15 @@ def test_config_bad_regex():
         )
 
 
-def test_groups_differ_by_pattern():
-    """Tests that differences in the 'groups' field obey groups_patterns"""
+def test_diff_unmatched_group_removed():
+    """Tests that when a group exists on the target but doesn't match
+    any patterns, the diff removes it
+    """
     source_data = {
-        "test1": User("test1", groups=[Group("division1"), Group("project1")]),
-        "test2": User("test2", groups=[Group("division1"), Group("project1")]),
+        "test1": User("test1", groups=(Group("division1"), Group("project1"))),
     }
     target_data = {
-        "test1": User("test1", groups=[Group("division2"), Group("project1")]),
-        "test2": User("test2", groups=[Group("division1"), Group("project2")]),
+        "test1": User("test1", groups=(Group("division1"), Group("project1"))),
     }
     config = {
         "fields": [
@@ -172,8 +172,10 @@ def test_groups_differ_by_pattern():
     diff = ModelDifference.calculate(
         source_data, target_data, ModelDifferenceConfig.from_dict(config)
     )
-    assert "test1" in diff.unchanged_users
-    assert "test2" in diff.changed_users
+    assert (
+        "test1" in diff.changed_users
+    ), "Removing a group pattern failed to cause lifecycle to update a user"
+    assert diff.changed_users["test1"].groups == (Group("project1"),)
 
 
 def test_groups_ignore_ordering():
