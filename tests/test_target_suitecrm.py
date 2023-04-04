@@ -201,12 +201,27 @@ def test_groups_sync(basic_config, suitecrm_server):
         assert group["attributes"]["name"] in ("bargroup", "bazgroup")
 
 
-def test_users_create(basic_target, suitecrm_server):
+def test_users_create(basic_config, suitecrm_server):
     """Create some users"""
     server = suitecrm_server([])
-    diff = basic_target.calculate_difference()
+    source = SourceStaticConfig(
+        config={
+            "groups": [{"name": "foobar"}],
+            "users": [
+                {
+                    "username": "admin",
+                    "forename": "admin",
+                    "surname": "alice",
+                    "email": ["admin@test.com"],
+                    "groups": ["foobar"],
+                },
+            ],
+        }
+    )
+    target = TargetSuiteCRM(basic_config, source)
+    diff = target.calculate_difference()
     old_users = server.search_by_type("User")
-    basic_target.users_create(diff)
+    target.users_create(diff)
     new_users = server.search_by_type("User")
     assert len(new_users) > len(old_users)
     assert len(new_users[0]["_relationships"]["SecurityGroups"]) > 0
@@ -254,7 +269,7 @@ def test_users_create_admin_group(basic_config, suitecrm_server):
     assert users[1]["attributes"]["is_admin"] == "0"
 
 
-def test_users_update(basic_config, suitecrm_server):
+def test_users_update(basic_target, suitecrm_server):
     """Update the attributes of an existing user and check the changes have
     been made
     """
@@ -269,7 +284,6 @@ def test_users_update(basic_config, suitecrm_server):
             "status": "Active",
         }
     )
-    target = TargetSuiteCRM(basic_config, None)
     diff = ModelDifference(
         source_users={
             "basicuser": User(
@@ -299,12 +313,12 @@ def test_users_update(basic_config, suitecrm_server):
             )
         },
     )
-    target.users_sync(diff)
+    basic_target.users_sync(diff)
     users = server.search_by_type("User")
     assert users[0]["attributes"]["first_name"] == "Deluxe"
 
 
-def test_users_delete(basic_config, suitecrm_server):
+def test_user_delete(basic_target, suitecrm_server):
     """Delete a user and check it's been deleted"""
     server = suitecrm_server([])
     server.create_user(
@@ -317,7 +331,6 @@ def test_users_delete(basic_config, suitecrm_server):
             "status": "Active",
         }
     )
-    target = TargetSuiteCRM(basic_config, None)
     user = User(
         "basicuser", forename="Basic", surname="Bob", email=("basic.bob@example.org",)
     )
@@ -329,7 +342,7 @@ def test_users_delete(basic_config, suitecrm_server):
         unchanged_users={},
         removed_users={"basicuser": user},
     )
-    target.users_cleanup(diff)
+    basic_target.users_cleanup(diff)
     users = server.search_by_type("User")
     assert len(users) == 0
 
@@ -487,32 +500,6 @@ def test_group_add_update_not_recreate(basic_config, suitecrm_server):
     ), "The old group wasn't updated"
 
 
-@pytest.fixture(name="basic_source")
-def fixture_source():
-    """We need a source to set up a proper SuiteCRM target"""
-    source = SourceStaticConfig(
-        config={
-            "groups": [{"name": "foobar"}],
-            "users": [
-                {
-                    "username": "admin",
-                    "forename": "admin",
-                    "surname": "alice",
-                    "email": ["admin@test.com"],
-                    "groups": ["foobar"],
-                },
-                {
-                    "username": "basicuser",
-                    "forename": "basic",
-                    "surname": "bob",
-                    "groups": ["foobar"],
-                },
-            ],
-        }
-    )
-    return source
-
-
 @pytest.fixture(name="suitecrm_server")
 def fixture_suitecrm_server(mocker):
     """Patches requests.request so that it gets routed through a MockSuiteCRMServer"""
@@ -553,7 +540,7 @@ def fixture_suitecrm_server(mocker):
 
 
 @pytest.fixture(name="basic_target")
-def fixture_basic_target(basic_config, basic_source):
+def fixture_basic_target(basic_config):
     """Create a TargetSuiteCRM with default config"""
-    target = TargetSuiteCRM(basic_config, basic_source)
+    target = TargetSuiteCRM(basic_config, None)
     return target
