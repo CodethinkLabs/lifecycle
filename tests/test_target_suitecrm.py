@@ -79,10 +79,17 @@ def test_create_multi_email(basic_target, suitecrm_server):
         assert email_entry["attributes"]["email_address"] in emails
 
 
-def test_sync_multi_email(basic_target, suitecrm_server):
+@pytest.mark.parametrize(
+    "after_emails",
+    [
+        ("foo.bar@example.com", "foo.bar@example.biz"),
+        (""),
+        ("!#$%&'*+-/=?^_`{|}~@a.com"),
+    ],
+)
+def test_sync_multi_email(after_emails, basic_target, suitecrm_server):
     """Update a user's E-mail addresses with multiple, completely different ones"""
     before_emails = ("foo.bar@example.org",)
-    after_emails = ("foo.bar@example.com", "foo.bar@example.biz")
     before_user = User(
         "foobar",
         forename="Foo",
@@ -107,8 +114,10 @@ def test_sync_multi_email(basic_target, suitecrm_server):
     server = suitecrm_server()
     basic_target.users_sync(diff)
     user_id = server.get_entry_by_attribute("user_name", "foobar")["id"]
+    stored_emails = []
     for entry in server.get_related_entries_for_module(user_id, "email_addresses"):
-        assert entry["attributes"]["email_address"] in after_emails
+        stored_emails.append(entry["attributes"]["email_address"])
+    assert list(stored_emails).sort() == list(after_emails).sort()
 
 
 def test_basic_fetch(basic_target, suitecrm_server):
@@ -200,6 +209,10 @@ def test_groups_sync(basic_config, suitecrm_server):
     for group in group_entries:
         assert group["attributes"]["name"] in ("bargroup", "bazgroup")
 
+    # Make sure that we've not added an extra user by accident
+    users = server.search_by_type("User")
+    assert len(users) == 1
+
 
 def test_users_create(basic_config, suitecrm_server):
     """Create some users"""
@@ -227,16 +240,16 @@ def test_users_create(basic_config, suitecrm_server):
     assert len(new_users[0]["_relationships"]["SecurityGroups"]) > 0
 
 
-def test_users_create_admin_group(basic_config, suitecrm_server):
-    """Declare a group as an admin group and check whether is_admin is set
-    based on membership of that group
-    """
-    server = suitecrm_server([])
-    config = basic_config.copy()
-    config["admin_groups"] = ["AdminGroup"]
-    target = TargetSuiteCRM(
-        config,
-        SourceStaticConfig(
+@pytest.fixture(name="create_admin_group_source")
+def fixture_create_admin_group_source():
+    """Create a source where an admin group exists as well
+    as potentially marking a user as admin"""
+
+    def _create_admin_group_source(admin_user_exists):
+        in_groups = tuple()
+        if admin_user_exists:
+            in_groups = ("AdminGroup",)
+        admin_source = SourceStaticConfig(
             config={
                 "groups": [
                     {"name": "AdminGroup"},
@@ -248,7 +261,7 @@ def test_users_create_admin_group(basic_config, suitecrm_server):
                         "surname": "Bar",
                         "fullname": "Foo Bar",
                         "email": ("foo.bar@example.org",),
-                        "groups": ("AdminGroup",),
+                        "groups": in_groups,
                     },
                     {
                         "username": "bazquux",
@@ -260,12 +273,35 @@ def test_users_create_admin_group(basic_config, suitecrm_server):
                     },
                 ],
             },
-        ),
-    )
+        )
+        return admin_source
+
+    return _create_admin_group_source
+
+
+def test_users_admin_group(create_admin_group_source, basic_config, suitecrm_server):
+    """Declare a group as an admin group and check whether is_admin is set
+    based on membership of that group"""
+    server = suitecrm_server([])
+    config = basic_config.copy()
+    config["admin_groups"] = ["AdminGroup"]
+    is_admin_source = create_admin_group_source(True)
+    target = TargetSuiteCRM(config, is_admin_source)
+
     diff = target.calculate_difference()
     target.users_create(diff)
+
     users = server.search_by_type("User")
     assert users[0]["attributes"]["is_admin"] == "1"
+    assert users[1]["attributes"]["is_admin"] == "0"
+
+    target = TargetSuiteCRM(config, create_admin_group_source(False))
+
+    diff = target.calculate_difference()
+    target.users_sync(diff)
+
+    users = server.search_by_type("User")
+    assert users[0]["attributes"]["is_admin"] == "0"
     assert users[1]["attributes"]["is_admin"] == "0"
 
 
@@ -331,20 +367,35 @@ def test_user_delete(basic_target, suitecrm_server):
             "status": "Active",
         }
     )
-    user = User(
+    server.create_user(
+        {
+            "user_name": "adalice",
+            "first_name": "Ad",
+            "last_name": "Alice",
+            "email1": "ad.alice@example.org",
+            "status": "Active",
+        }
+    )
+
+    deleted_user = User(
         "basicuser", forename="Basic", surname="Bob", email=("basic.bob@example.org",)
     )
+    remaining_user = User(
+        "adalice", forename="Ad", surname="Alice", email=("ad.alice@example.org",)
+    )
+
     diff = ModelDifference(
-        source_users={"basicuser": user},
-        target_users={},
+        source_users={"basicuser": deleted_user, "adAlice": remaining_user},
+        target_users={"adAlice": remaining_user},
         added_users={},
         changed_users={},
-        unchanged_users={},
-        removed_users={"basicuser": user},
+        unchanged_users={"adAlice": remaining_user},
+        removed_users={"basicuser": deleted_user},
     )
+
     basic_target.users_cleanup(diff)
     users = server.search_by_type("User")
-    assert len(users) == 0
+    assert users[0]["attributes"]["first_name"] == "Ad"
 
 
 def test_groups_emails_sync_no_changes(basic_config, suitecrm_server):
