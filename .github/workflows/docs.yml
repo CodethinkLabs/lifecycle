@@ -7,10 +7,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - run: sudo apt install -y python3-sphinx python3-sphinx-rtd-theme python3-ldap3
-    - run: sudo pip install addict
-    - run: make -C docs html SPHINXOPTS="-W --keep-going"
-    - uses: actions/upload-artifact@v3
+    - name: Build Docs
+      run: |
+        sudo apt install -y python3-sphinx python3-sphinx-rtd-theme python3-ldap3
+        sudo pip install addict
+        make -C docs html SPHINXOPTS="-W --keep-going"
+    - name: Upload Pages artifact
+      uses: actions/upload-artifact@v3
       with:
         name: htmldoc
         path: docs/build/html
+  githubpages:
+    runs-on: ubuntu-latest
+    needs: htmldoc
+    if: github.ref == 'refs/head/main'
+    steps:
+      - name: Deploy Pages artifact
+        id: deployment
+        uses: actions/deploy-pages@v1
