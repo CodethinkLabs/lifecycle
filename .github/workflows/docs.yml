@@ -3,7 +3,7 @@ name: Generate Documentation
 on: push
 
 jobs:
-  htmldoc:
+  generate:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -13,15 +13,20 @@ jobs:
         sudo pip install addict
         make -C docs html SPHINXOPTS="-W --keep-going"
     - name: Upload Pages artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-pages-artifact@v1
       with:
-        name: htmldoc
+        name: documentation
         path: docs/build/html
-  githubpages:
+  deploy:
     runs-on: ubuntu-latest
-    needs: htmldoc
     if: github.ref == 'refs/head/main'
+    needs: generate
+    permissions:
+      pages: write
+      id-token: write
     steps:
-      - name: Deploy Pages artifact
-        id: deployment
-        uses: actions/deploy-pages@v1
+    - name: Deploy Pages artifact
+      id: deployment
+      uses: actions/deploy-pages@v1
+      with:
+        artifact_name: documentation
