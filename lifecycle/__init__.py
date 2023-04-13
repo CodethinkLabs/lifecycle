@@ -31,6 +31,15 @@ class ConfigUnexpectedType(ConfigException):
         super().__init__(self.message)
 
 
+class ConfigUnexpectedInputType(ConfigException):
+    """Exception caused by config not being a mapping"""
+
+    def __init__(self, config):
+        self.config = config
+        self.message = f"Provided Config isn't a mapping. Config given is:{config}"
+        super().__init__(self.message)
+
+
 class ConfigMissingFields(ConfigException):
     """Exception caused by config having missing fields"""
 
@@ -71,15 +80,18 @@ class _Base(ABC):
 
         self.config = self.configure(config)
         if not isinstance(self.config, Mapping):
-            raise ConfigUnexpectedType(self.__class__, config)
+            raise ConfigUnexpectedType(self.__class__, self.config)
 
     @staticmethod
     def _check_fields(_dict: Dict, mandatory_fields: set, optional_fields: set):
-        """Check a dictionary's fields are valid
-
+        """
+        :raises ConfigUnexpectedInputType: If the config isn't a mapping
         :raises ConfigMissingFields: If there are missing fields
         :raises ConfigUnexpectedFields: If there are unexpected fields
         """
+        if not isinstance(_dict, Mapping):
+            raise ConfigUnexpectedInputType(_dict)
+
         missing_fields = mandatory_fields - set(_dict.keys())
         if missing_fields:
             raise ConfigMissingFields(missing_fields, _dict)
@@ -109,6 +121,10 @@ class _Base(ABC):
 
 class SourceBase(_Base):
     """Abstract base class for sources"""
+
+    @abstractmethod
+    def fetch(self):
+        """Load all config and generate a User model"""
 
 
 class TargetBase(_Base):
