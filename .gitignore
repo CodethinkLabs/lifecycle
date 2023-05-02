@@ -8,3 +8,5 @@ __pycache__
 /examples/suitecrm/suitecrm.yml
 /docs/build
 /docs/source/generated
+/dist
+/ct_lifecycle.egg-info
