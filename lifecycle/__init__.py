@@ -1,6 +1,6 @@
 """Lifecycle management namespace"""
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
