@@ -38,7 +38,8 @@ jobs:
         --outdir dist/
         .
 
-    - name: Publish to test PyPI always
+    - name: Publish to test PyPI on tag to gate release failures
+      if: startsWith(github.ref, 'refs/tags')
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.TEST_PYPI_API_TOKEN }}
