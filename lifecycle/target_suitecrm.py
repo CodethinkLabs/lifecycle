@@ -254,15 +254,16 @@ class TargetSuiteCRM(TargetBase):
             address = ent["attributes"]["email_address"]
             _id = ent["id"]
             if address in self._emails_to_id:
-                logging.warning(
-                    (
-                        "Duplicate E-mail address entries found in suitecrm server:"
-                        "Address '%s' has IDs '%s' and '%s'. Using the first one only."
-                    ),
-                    address,
-                    self._emails_to_id[address],
-                    _id,
-                )
+                if not refresh:
+                    logging.warning(
+                        (
+                            "Duplicate E-mail address entries found in suitecrm server:"
+                            "Address '%s' has IDs '%s' and '%s'. Using the first one only."
+                        ),
+                        address,
+                        self._emails_to_id[address],
+                        _id,
+                    )
             else:
                 self._emails_to_id[address] = _id
         return self._emails_to_id
@@ -279,15 +280,16 @@ class TargetSuiteCRM(TargetBase):
             groupname = ent["attributes"]["name"]
             _id = ent["id"]
             if groupname in self._groups_to_id:
-                logging.warning(
-                    (
-                        "Duplicate Group entries found in suitecrm server:"
-                        "Group '%s' has IDs '%s' and '%s'. Using the first one only."
-                    ),
-                    groupname,
-                    self._groups_to_id[groupname],
-                    _id,
-                )
+                if not refresh:
+                    logging.warning(
+                        (
+                            "Duplicate Group entries found in suitecrm server:"
+                            "Group '%s' has IDs '%s' and '%s'. Using the first one only."
+                        ),
+                        groupname,
+                        self._groups_to_id[groupname],
+                        _id,
+                    )
             else:
                 self._groups_to_id[groupname] = _id
                 self._groups_to_attributes[groupname] = ent["attributes"]
