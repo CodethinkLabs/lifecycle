@@ -22,10 +22,14 @@ class SourceLDAP3(SourceBase):
         "bind_password",
         "anonymous_bind",
         "use_ssl",
+        "search_filter",
+        "group_search_filter",
     }
     default_config = {
         "anonymous_bind": False,
         "use_ssl": True,
+        "search_filter": "(objectclass=organizationalPerson)",
+        "group_search_filter": "(objectClass=groupOfNames)",
     }
 
     def configure(self, config: Dict):
@@ -66,7 +70,7 @@ class SourceLDAP3(SourceBase):
 
         connection.search(
             search_base=self.config["base_dn"],
-            search_filter="(objectclass=organizationalPerson)",
+            search_filter=self.config["search_filter"],
             search_scope=ldap3.SUBTREE,
             attributes=[
                 "description",
@@ -113,7 +117,7 @@ class SourceLDAP3(SourceBase):
 
         connection.search(
             search_base=self.config["base_dn"],
-            search_filter="(objectClass=groupOfNames)",
+            search_filter=self.config["group_search_filter"],
             search_scope=ldap3.SUBTREE,
             attributes=["description", "mail", "member", "cn"],
         )
