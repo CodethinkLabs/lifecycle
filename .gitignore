@@ -10,3 +10,5 @@ __pycache__
 /docs/source/generated
 /dist
 /ct_lifecycle.egg-info
+.env
+Pipfile.lock
