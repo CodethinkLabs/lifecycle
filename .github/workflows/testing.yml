@@ -1,10 +1,12 @@
 name: Run Test Suite
 
-on: [push]
+on:
+  - pull_request
 
 jobs:
   pytest:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
     - uses: actions/checkout@v3
       with:
@@ -25,6 +27,7 @@ jobs:
         coverage report --fail-under=80
   smoketest:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
     - uses: actions/checkout@v3
       with:

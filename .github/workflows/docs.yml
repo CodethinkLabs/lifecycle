@@ -1,10 +1,13 @@
 name: Generate Documentation
 
-on: push
+on:
+  - push
+  - pull_request
 
 jobs:
   generate:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
     - uses: actions/checkout@v3
     - name: Build Docs
@@ -19,13 +22,14 @@ jobs:
         path: docs/build/html
   deploy:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 5
+    if: startsWith(github.ref, 'refs/tags')
     needs: generate
     permissions:
       pages: write
       id-token: write
     steps:
-    - name: Deploy Pages artifact
+    - name: Deploy Pages artifact on tag
       id: deployment
       uses: actions/deploy-pages@v1
       with:
