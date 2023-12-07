@@ -17,7 +17,7 @@ class ModelBase:
 
     @classmethod
     def optional_fields(cls):
-        """Mandatory fields have defaults and *may* be passed into the dataclass' constructor"""
+        """Optional fields have defaults and *may* be passed into the dataclass' constructor"""
         return {
             field.name
             for field in fields(cls)
