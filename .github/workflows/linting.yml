@@ -1,10 +1,12 @@
 name: Run Linters
 
-on: [push]
+on:
+  - pull_request
 
 jobs:
   pylint:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
     - uses: actions/checkout@v3
       with:
@@ -23,6 +25,7 @@ jobs:
         pytest --pylint
   pre-commit:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
     - uses: actions/checkout@v3
       with:
