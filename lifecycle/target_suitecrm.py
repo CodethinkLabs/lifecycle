@@ -40,6 +40,7 @@ class TargetSuiteCRM(TargetBase):
         "users_cleanup",
         "excluded_usernames",
         "admin_groups",
+        "delete_absent_users",
     }
 
     supported_user_fields = {
@@ -60,6 +61,7 @@ class TargetSuiteCRM(TargetBase):
         "api_page_size": 20,
         "stages": ["users_create", "users_sync", "users_disable", "users_cleanup"],
         "excluded_usernames": [],
+        "delete_absent_users": True,
     }
 
     def process_groups_patterns(self, groups_patterns: list[str]) -> list[str]:
@@ -477,23 +479,57 @@ class TargetSuiteCRM(TargetBase):
         logging.debug("Excluded usernames: %s", self.config["excluded_usernames"])
         for user in diff.removed_users.values():
             _id = self._users_data[user.username]["id"]
-            logging.debug(
-                "Attempting to delete: %s. Is user excluded: %s",
-                user.username,
-                user.username in self.config["excluded_usernames"],
-            )
-            if user.username not in self.config["excluded_usernames"]:
-                deletion_record = {
-                    "data": {
-                        "type": "User",
-                        "id": _id,
-                        "attributes": {
-                            "deleted": 1,
-                        },
+            if self.config["delete_absent_users"]:
+                if user.username not in self.config["excluded_usernames"]:
+                    logging.debug(
+                        "Attempting to delete %s.",
+                        user.username,
+                    )
+                    deletion_record = {
+                        "data": {
+                            "type": "User",
+                            "id": _id,
+                            "attributes": {
+                                "deleted": 1,
+                            },
+                        }
                     }
-                }
-                logging.debug("Deleting user: %s", user.username)
-                self._request("/Api/V8/module", method="PATCH", json=deletion_record)
+                    logging.debug("Deleting user: %s", user.username)
+                    self._request(
+                        "/Api/V8/module", method="PATCH", json=deletion_record
+                    )
+                else:
+                    logging.debug(
+                        "Not attempting to delete %s as they are in excluded_usernames",
+                        user.username,
+                    )
+            else:
+                if not user.locked:
+                    if user.username not in self.config["excluded_usernames"]:
+                        logging.debug("Attempting to disable: %s.", user.username)
+                        disablement_record = {
+                            "data": {
+                                "type": "User",
+                                "id": _id,
+                                "attributes": {
+                                    "status": "Inactive",
+                                },
+                            }
+                        }
+                        logging.debug("Disabling account for %s", user.username)
+                        self._request(
+                            "/Api/V8/module", method="PATCH", json=disablement_record
+                        )
+                    else:
+                        logging.debug(
+                            "Not attempting to disable %s as they are in excluded_usernames",
+                            user.username,
+                        )
+                else:
+                    logging.debug(
+                        "Not attempting to disable %s as they are already locked",
+                        user.username,
+                    )
 
     def _sync_emails_for_users(self, diff: ModelDifference):
         for user in diff.changed_users.values():
