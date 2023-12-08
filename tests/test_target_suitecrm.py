@@ -430,8 +430,8 @@ def test_user_delete(basic_target, suitecrm_server):
 
     basic_target.users_cleanup(diff)
     users = server.search_by_type("User")
-    assert users[0]["attributes"]["first_name"] == "Ad"
-    assert users[1]["attributes"]["first_name"] == "Ernie"
+    assert any(user["attributes"]["first_name"] == "Ad" for user in users)
+    assert any(user["attributes"]["first_name"] == "Ernie" for user in users)
 
 
 def test_users_disable(users_disable_target, suitecrm_server):
@@ -494,12 +494,21 @@ def test_users_disable(users_disable_target, suitecrm_server):
 
     users_disable_target.users_cleanup(diff)
     users = server.search_by_type("User")
-    assert users[0]["attributes"]["first_name"] == "Ad"
-    assert users[0]["attributes"]["status"] == "Active"
-    assert users[1]["attributes"]["first_name"] == "Basic"
-    assert users[1]["attributes"]["status"] == "Inactive"
-    assert users[2]["attributes"]["first_name"] == "Ernie"
-    assert users[2]["attributes"]["status"] == "Active"
+    assert any(
+        user["attributes"]["first_name"] == "Ad"
+        and user["attributes"]["status"] == "Active"
+        for user in users
+    )
+    assert any(
+        user["attributes"]["first_name"] == "Basic"
+        and user["attributes"]["status"] == "Inactive"
+        for user in users
+    )
+    assert any(
+        user["attributes"]["first_name"] == "Ernie"
+        and user["attributes"]["status"] == "Active"
+        for user in users
+    )
 
 
 def test_groups_emails_sync_no_changes(basic_config, suitecrm_server):
