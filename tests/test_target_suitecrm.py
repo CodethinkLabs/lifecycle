@@ -13,7 +13,7 @@ from .mock_suitecrm_server import MethodException, MockSuiteCRMServer
 
 
 @pytest.fixture(name="basic_config")
-def fixture_config():
+def fixture_basic_config():
     """Create a config"""
     config = {
         "url": "127.0.0.1:8080",
@@ -24,6 +24,18 @@ def fixture_config():
     }
     return config
 
+@pytest.fixture(name="users_disable_config")
+def fixture_users_disable_config():
+    """Create a config"""
+    config = {
+        "url": "127.0.0.1:8080",
+        "api_username": "user",
+        "api_password": "bitnami",
+        "api_client_id": "asd",
+        "api_client_secret": "secret",
+        "delete_absent_users": False,
+    }
+    return config
 
 def test_basic_config_creation(basic_config):
     """Make sure that a target can be created from a basic config"""
@@ -397,6 +409,50 @@ def test_user_delete(basic_target, suitecrm_server):
     users = server.search_by_type("User")
     assert users[0]["attributes"]["first_name"] == "Ad"
 
+def test_users_disable(users_disable_target, suitecrm_server):
+    """Delete a user and check it's been deleted"""
+    server = suitecrm_server([])
+    server.create_user(
+        {
+            "user_name": "adalice",
+            "first_name": "Ad",
+            "last_name": "Alice",
+            "email1": "ad.alice@example.org",
+            "status": "Active",
+        }
+    )
+    server.create_user(
+        {
+            "user_name": "basicuser",
+            "first_name": "Basic",
+            "last_name": "Bob",
+            "full_name": "Basic Bob",
+            "email1": "basic.bob@example.org",
+            "status": "Active",
+        }
+    )
+
+    deleted_user = User(
+        "basicuser", forename="Basic", surname="Bob", email=("basic.bob@example.org",)
+    )
+    remaining_user = User(
+        "adalice", forename="Ad", surname="Alice", email=("ad.alice@example.org",)
+    )
+
+    diff = ModelDifference(
+        source_users={"adAlice": remaining_user, "basicuser": deleted_user},
+        target_users={"adAlice": remaining_user},
+        added_users={},
+        changed_users={},
+        unchanged_users={"adAlice": remaining_user},
+        removed_users={"basicuser": deleted_user},
+    )
+
+    users_disable_target.users_cleanup(diff)
+    users = server.search_by_type("User")
+    assert users[0]["attributes"]["first_name"] == "Ad"
+    assert users[1]["attributes"]["first_name"] == "Basic"
+    assert users[1]["attributes"]["status"] == "Inactive"
 
 def test_groups_emails_sync_no_changes(basic_config, suitecrm_server):
     """Test that when a user is part of a group with an E-mail address,
@@ -594,4 +650,10 @@ def fixture_suitecrm_server(mocker):
 def fixture_basic_target(basic_config):
     """Create a TargetSuiteCRM with default config"""
     target = TargetSuiteCRM(basic_config, None)
+    return target
+
+@pytest.fixture(name="users_disable_target")
+def fixture_users_disable_target(users_disable_config):
+    """Create a TargetSuiteCRM with config set up to disable users instead of deleting them"""
+    target = TargetSuiteCRM(users_disable_config, None)
     return target
