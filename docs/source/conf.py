@@ -13,7 +13,7 @@ copyright = "2023, Codethink Ltd"
 author = "Codethink Ltd"
 
 release = "0.1"
-version = "0.1.3"
+version = "0.1.4"
 
 # -- General configuration
 
