@@ -21,8 +21,10 @@ def fixture_basic_config():
         "api_password": "bitnami",
         "api_client_id": "asd",
         "api_client_secret": "secret",
+        "excluded_usernames": ["excluded"],
     }
     return config
+
 
 @pytest.fixture(name="users_disable_config")
 def fixture_users_disable_config():
@@ -34,8 +36,10 @@ def fixture_users_disable_config():
         "api_client_id": "asd",
         "api_client_secret": "secret",
         "delete_absent_users": False,
+        "excluded_usernames": ["excluded"],
     }
     return config
+
 
 def test_basic_config_creation(basic_config):
     """Make sure that a target can be created from a basic config"""
@@ -388,26 +392,47 @@ def test_user_delete(basic_target, suitecrm_server):
             "status": "Active",
         }
     )
-
-    deleted_user = User(
-        "basicuser", forename="Basic", surname="Bob", email=("basic.bob@example.org",)
+    server.create_user(
+        {
+            "user_name": "excluded",
+            "first_name": "Ernie",
+            "last_name": "Excluded",
+            "email1": "ernie.excluded@example.org",
+            "status": "Active",
+        }
     )
+
     remaining_user = User(
         "adalice", forename="Ad", surname="Alice", email=("ad.alice@example.org",)
     )
+    deleted_user = User(
+        "basicuser", forename="Basic", surname="Bob", email=("basic.bob@example.org",)
+    )
+    excluded_user = User(
+        "excluded",
+        forename="Ernie",
+        surname="Excluded",
+        email=("ernie.excluded@example.org",),
+    )
 
     diff = ModelDifference(
-        source_users={"basicuser": deleted_user, "adAlice": remaining_user},
+        source_users={
+            "adAlice": remaining_user,
+            "basicuser": deleted_user,
+            "excluded": excluded_user,
+        },
         target_users={"adAlice": remaining_user},
         added_users={},
         changed_users={},
         unchanged_users={"adAlice": remaining_user},
-        removed_users={"basicuser": deleted_user},
+        removed_users={"basicuser": deleted_user, "excluded": excluded_user},
     )
 
     basic_target.users_cleanup(diff)
     users = server.search_by_type("User")
     assert users[0]["attributes"]["first_name"] == "Ad"
+    assert users[1]["attributes"]["first_name"] == "Ernie"
+
 
 def test_users_disable(users_disable_target, suitecrm_server):
     """Delete a user and check it's been deleted"""
@@ -431,28 +456,51 @@ def test_users_disable(users_disable_target, suitecrm_server):
             "status": "Active",
         }
     )
-
-    deleted_user = User(
-        "basicuser", forename="Basic", surname="Bob", email=("basic.bob@example.org",)
+    server.create_user(
+        {
+            "user_name": "excluded",
+            "first_name": "Ernie",
+            "last_name": "Excluded",
+            "email1": "ernie.excluded@example.org",
+            "status": "Active",
+        }
     )
+
     remaining_user = User(
         "adalice", forename="Ad", surname="Alice", email=("ad.alice@example.org",)
     )
+    deleted_user = User(
+        "basicuser", forename="Basic", surname="Bob", email=("basic.bob@example.org",)
+    )
+    excluded_user = User(
+        "excluded",
+        forename="Ernie",
+        surname="Excluded",
+        email=("ernie.excluded@example.org",),
+    )
 
     diff = ModelDifference(
-        source_users={"adAlice": remaining_user, "basicuser": deleted_user},
+        source_users={
+            "adAlice": remaining_user,
+            "basicuser": deleted_user,
+            "excluded": excluded_user,
+        },
         target_users={"adAlice": remaining_user},
         added_users={},
         changed_users={},
         unchanged_users={"adAlice": remaining_user},
-        removed_users={"basicuser": deleted_user},
+        removed_users={"basicuser": deleted_user, "excluded": excluded_user},
     )
 
     users_disable_target.users_cleanup(diff)
     users = server.search_by_type("User")
     assert users[0]["attributes"]["first_name"] == "Ad"
+    assert users[0]["attributes"]["status"] == "Active"
     assert users[1]["attributes"]["first_name"] == "Basic"
     assert users[1]["attributes"]["status"] == "Inactive"
+    assert users[2]["attributes"]["first_name"] == "Ernie"
+    assert users[2]["attributes"]["status"] == "Active"
+
 
 def test_groups_emails_sync_no_changes(basic_config, suitecrm_server):
     """Test that when a user is part of a group with an E-mail address,
@@ -651,6 +699,7 @@ def fixture_basic_target(basic_config):
     """Create a TargetSuiteCRM with default config"""
     target = TargetSuiteCRM(basic_config, None)
     return target
+
 
 @pytest.fixture(name="users_disable_target")
 def fixture_users_disable_target(users_disable_config):
