@@ -15,6 +15,7 @@ setup(
             "pytest-cov",
             "pytest-mock",
             "pytest-pylint",
+            "black",
         ],
     },
     python_requires=">=3.7",
